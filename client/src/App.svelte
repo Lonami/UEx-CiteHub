@@ -1,5 +1,8 @@
 <script>
-    let name = 'world';
+    import ProfileInfo from './ProfileInfo.svelte';
+    import Publications from './Publications.svelte';
 </script>
 
-<h1>Hello {name}!</h1>
+<h1>UEx-CiteHub</h1>
+<ProfileInfo/>
+<Publications/>
