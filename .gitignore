@@ -1,0 +1,4 @@
+data/
+*.ini
+
+!example-server-config.ini
