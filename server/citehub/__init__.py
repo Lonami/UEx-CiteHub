@@ -16,12 +16,12 @@ async def fetch_google_scholar(session, full_name):
 
     cached = STORAGE_ROOT / f'gscholar {full_name}'
     if cached.is_file():
-        LOGGER.info('Loading cached author %s', full_name)
+        LOGGER.info('[gscholar] Loading cached author %s', full_name)
         with cached.open(encoding='utf-8') as fd:
             return json.load(fd)
 
     async for author in scholar.search_author(session, full_name):
-        LOGGER.info('Saving author to cache %s', full_name)
+        LOGGER.info('[gscholar] Saving author to cache %s', full_name)
         with cached.open('w', encoding='utf-8') as fd:
             json.dump(author, fd)
         return author
@@ -32,22 +32,22 @@ async def fetch_ms_academics(session, key, name_query):
 
     cached = STORAGE_ROOT / f'msacademics {name_query}'
     if cached.is_file():
-        LOGGER.info('Loading cached author %s', name_query)
+        LOGGER.info('[msacademics] Loading cached publications %s', name_query)
         with cached.open(encoding='utf-8') as fd:
             return json.load(fd)
 
     academics = Academics(session, key)
 
     PAPER_ATTRIBUTES = 'AA.AfId,AA.AfN,AA.AuId,AA.AuN,AA.DAuN,AA.DAfN,AA.S,BT,BV,C.CId,C.CN,CC,CitCon,D,DN,DOI,E,ECC,F.DFN,F.FId,F.FN,FP,I,IA,Id,J.JId,J.JN,LP,PB,Pt,RId,S,Ti,V,VFN,VSN,W,Y'
-    author = await academics.evaluate(
+    publications = await academics.evaluate(
         expr=f"Composite(AA.AuN='{name_query}')",
         attributes=PAPER_ATTRIBUTES,
         count=1000
     )
-    LOGGER.info('Saving author to cache %s', name_query)
+    LOGGER.info('[msacademics] Saving publications to cache %s', name_query)
     with cached.open('w', encoding='utf-8') as fd:
-        json.dump(author, fd)
-    return author
+        json.dump(publications, fd)
+    return publications
 
 
 async def fetch_scopus(session, key, first_name, last_name):
@@ -55,7 +55,7 @@ async def fetch_scopus(session, key, first_name, last_name):
 
     cached = STORAGE_ROOT / f'scopus {first_name} {last_name}'
     if cached.is_file():
-        LOGGER.info('Loading cached author %s', first_name)
+        LOGGER.info('[scopus] Loading cached publications %s', first_name)
         with cached.open(encoding='utf-8') as fd:
             return json.load(fd)
 
@@ -66,11 +66,11 @@ async def fetch_scopus(session, key, first_name, last_name):
     query = f'AUTHFIRST({first_name}) AND AUTHLASTNAME({last_name})'
     async for author in scopus.search_author(query):
         eid = author['eid']
-        author = await scopus.search_scopus(f'AU-ID({eid})')
-        LOGGER.info('Saving author to cache %s', first_name)
+        publications = await scopus.search_scopus(f'AU-ID({eid})')
+        LOGGER.info('[scopus] Saving publications to cache %s', first_name)
         with cached.open('w', encoding='utf-8') as fd:
-            json.dump(author, fd)
-        return author
+            json.dump(publications, fd)
+        return publications
 
     # TODO consider using ORCID, Researched ID, Publons or Crossref
     #      if Scopus does not provide information about the publications.
@@ -81,15 +81,15 @@ async def fetch_aminer(session, auth, name_query):
 
     cached = STORAGE_ROOT / f'aminer {name_query}'
     if cached.is_file():
-        LOGGER.info('Loading cached author %s', name_query)
+        LOGGER.info('[aminer] Loading cached publications %s', name_query)
         with cached.open(encoding='utf-8') as fd:
             return json.load(fd)
 
     aminer = ArnetMiner(session, auth)
     author = await aminer.search_person(name_query)
     author_id = author['items'][0]['id']
-    author = await aminer.search_publications(author_id)
-    LOGGER.info('Saving author to cache %s', name_query)
+    publications = await aminer.search_publications(author_id)
+    LOGGER.info('[aminer] Saving publications to cache %s', name_query)
     with cached.open('w', encoding='utf-8') as fd:
-        json.dump(author, fd)
-    return author
+        json.dump(publications, fd)
+    return publications
