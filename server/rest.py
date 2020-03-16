@@ -65,9 +65,14 @@ def merge_sorted_result(result):
 async def get_publications(request):
     result = []
 
-    data = await citehub.fetch_google_scholar(request.app['client'], 'Cristina Vicente-Chicote')
+    # Google Scholar
+    data = await citehub.fetch_google_scholar(
+        request.app['client'],
+        'Cristina Vicente-Chicote'
+    )
     result.extend(map(adapt_scholar_publication, data['publications']))
 
+    # Microsoft Academics
     data = await citehub.fetch_ms_academics(
         request.app['client'],
         request.app['config']['api-keys']['msacademics'],
@@ -75,9 +80,11 @@ async def get_publications(request):
     )
     result.extend(map(adapt_academics_publication, data['entities']))
 
+    # Sort, merge
     result.sort(key=lambda x: x['name'])
     merge_sorted_result(result)
 
+    # TODO Objective: Gather data from more sources
     return web.json_response(result)
 
 ROUTES = [

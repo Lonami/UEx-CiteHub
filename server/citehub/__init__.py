@@ -48,3 +48,29 @@ async def fetch_ms_academics(session, key, name_query):
     with cached.open('w', encoding='utf-8') as fd:
         json.dump(author, fd)
     return author
+
+
+async def fetch_scopus(session, key, first_name, last_name):
+    from .scopus import Scopus
+
+    cached = STORAGE_ROOT / f'scopus {first_name} {last_name}'
+    if cached.is_file():
+        LOGGER.info('Loading cached author %s', first_name)
+        with cached.open(encoding='utf-8') as fd:
+            return json.load(fd)
+
+    scopus = Scopus(session, key)
+
+    # TODO This used to work from home but now it no longer does…
+    #      Cannot test it unless we are at university.
+    query = f'AUTHFIRST({first_name}) AND AUTHLASTNAME({last_name})'
+    async for author in scopus.search_author(query):
+        eid = author['eid']
+        author = await scopus.search_scopus(f'AU-ID({eid})')
+        LOGGER.info('Saving author to cache %s', first_name)
+        with cached.open('w', encoding='utf-8') as fd:
+            json.dump(author, fd)
+        return author
+
+    # TODO consider using ORCID, Researched ID, Publons or Crossref
+    #      if Scopus does not provide information about the publications.
