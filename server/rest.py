@@ -27,6 +27,17 @@ def adapt_academics_publication(data):
         'sources': ['ms-academics'],
     }
 
+def adapt_aminer_publication(data):
+    return {
+        'id': data['id'],
+        'name': data['title'],
+        'cites': data['num_citation'],
+        'year': data['year'],
+        'authors': [x['name'] for x in data['authors']],
+        'publisher': data.get('venue', {}).get('info', {}).get('name', ''),
+        'sources': ['aminer'],
+    }
+
 def merge_data(*data):
     assert len(data) != 0
     return {
@@ -79,6 +90,14 @@ async def get_publications(request):
         '***REMOVED***'
     )
     result.extend(map(adapt_academics_publication, data['entities']))
+
+    # Arnet Miner
+    data = await citehub.fetch_aminer(
+        request.app['client'],
+        request.app['config']['api-keys']['aminer'],
+        '***REMOVED***'
+    )
+    result.extend(map(adapt_aminer_publication, data['items']))
 
     # Sort, merge
     result.sort(key=lambda x: x['name'])

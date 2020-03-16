@@ -15,6 +15,8 @@
     <img src="img/scopus_favicon.svg" title="Scopus" alt="Scopus">
 {:else if source == 'ms-academics'}
     <img src="img/academics_favicon.svg" title="Microsoft Academics" alt="Microsoft Academics">
+{:else if source == 'aminer'}
+    <img src="img/aminer_favicon.svg" title="Arnet Miner" alt="Arnet Miner">
 {:else}
     <p>{source}</p>
 {/if}
