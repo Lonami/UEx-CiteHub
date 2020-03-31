@@ -14,7 +14,11 @@ install-tl-*/install-tl
 
 Adding the chosen path to `/etc/environment` helped, but a reboot is needed.
 
-It also seems to require Microsoft fonts (Times New Roman) to render properly.
+Once that's done, run:
+
+```sh
+make all
+```
 
 ## Template
 
