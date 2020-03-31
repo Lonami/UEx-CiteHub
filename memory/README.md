@@ -14,6 +14,8 @@ install-tl-*/install-tl
 
 Adding the chosen path to `/etc/environment` helped, but a reboot is needed.
 
+It also seems to require Microsoft fonts (Times New Roman) to render properly.
+
 ## Template
 
 The template for this memory can be found in the [Unex page for EPCC].

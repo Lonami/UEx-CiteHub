@@ -1,49 +1,33 @@
-%\documentclass[a4paper]{article}
-\documentclass[12pt,a4paper,twoside]{book} % tamaño 12
-%\usepackage[spanish]{babel}
-\usepackage[spanish, es-tabla]{babel}
-\usepackage[utf8x]{inputenc}
-\usepackage[table]{xcolor} % para poner color en las tablas
-\usepackage{tikz} % grafos
-\usetikzlibrary{arrows,shapes,positioning,shadows,trees}
-\usepackage{amsmath} % códigos
-\usepackage{setspace} %interlineado algoritmo
-\usepackage{algorithm}
-\usepackage{algorithmicx}
-\usepackage{algpseudocode}
-\algdef{SE}[DOWHILE]{Do}{doWhile}{\algorithmicdo}[1]{\algorithmicwhile\ #1}%
-\usepackage{subfig} % Para poner imágenes
-\usepackage{graphicx} % para poner dos imágenes juntas
-\usepackage[colorinlistoftodos]{todonotes}
-\usepackage{anysize} 
-\marginsize{4cm}{2.5cm}{2.5cm}{2.5cm} 
-% Márgenes {izquierda}{derecha}{arriba}{abajo}. 
-\usepackage{mathptmx}% http://ctan.org/pkg/mathptmx Times new roman
-\usepackage{amsfonts}% Para expresiones matemáticas
-%\usepackage{setspace} % interlineado
-\renewcommand{\baselinestretch}{1.5} % Interlineado
-\usepackage{enumerate}% para los enumerate
-\usepackage{fancyhdr}
-\pagestyle{fancy}
-\usepackage[none]{hyphenat} %saltos y justificación texto
-\usepackage{float} 
-\usepackage{tikz}
-\usetikzlibrary{calc}
-\usepackage{changepage}
-\usepackage{ragged2e}
-\usepackage{svg}
+\documentclass[12pt,a4paper,twoside]{book}
 
-%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%% XML %%%%%%%%%%
-\usepackage{listings}
-
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{anysize}
 \usepackage{appendix}
-% cambiar apéndices por anexos
+\usepackage[spanish, es-tabla]{babel}
+\usepackage{changepage}
+\usepackage{fancyhdr}
+\usepackage{float}
+\usepackage[T1]{fontenc}
+\usepackage{fontspec}
+\usepackage{listings}
+\usepackage{mathptmx}
+\usepackage[none]{hyphenat}
+\usepackage{setspace}
+\usepackage{subfig}
+\usepackage{svg}
+\usepackage{tikz}
+
+\marginsize{4cm}{2.5cm}{2.5cm}{2.5cm}
+\pagestyle{fancy}
+\renewcommand{\baselinestretch}{1.5}
+\usetikzlibrary{arrows,calc,shapes,positioning,shadows,trees}
+\svgpath{{./pictures/}}
+
 \renewcommand{\appendixname}{Anexos}
 \renewcommand{\appendixtocname}{Anexos}
 \renewcommand{\appendixpagename}{Anexos}
 
-\usepackage{color}
 \definecolor{gray}{rgb}{0.4,0.4,0.4}
 \definecolor{darkblue}{rgb}{0.0,0.0,0.6}
 \definecolor{cyan}{rgb}{0.0,0.6,0.6}
@@ -65,111 +49,99 @@
   keywordstyle=\color{cyan},
   morekeywords={id,tx,ty,tz,rx,ry,rz,scale,file,type}% list your attributes here
 }
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%% COLOR %%%%%%%%
-\definecolor{palegreen}{rgb}{0.6, 0.98, 0.6}
-\definecolor{palegoldenrod}{rgb}{0.93, 0.91, 0.67}
 
 \makeatletter
 \def\BState{\State\hskip-\ALG@thistlm}
 \makeatother
 
-
-\svgpath{{./pictures/}}
-
-\rhead{\begin{picture}(0,0) \put(0,0){\includesvg[width=1cm]{logouex_transp}}
-\end{picture}}
-
+\rhead{
+  \begin{picture}(0,0)
+  \put(0,0){
+    \includesvg[width=1cm]{logouex_transp}
+  }
+  \end{picture}
+}
 
 \begin{document}
-\sloppy 
-\pagebreak 
-%http://tex.stackexchange.com/questions/129088/create-a-frame-for-a-title-page
+\sloppy
+\pagebreak
 \makeatletter
 
 \begin{titlepage}
-	\begin{adjustwidth}{-1.5cm}{0cm}
-		\begin{tikzpicture}[remember picture, overlay]
-		\usetikzlibrary{calc}
-		\draw[line width = 1.5pt] ($(current page.north west) + (1in,-1in)$) rectangle ($(current page.south east) + (-1in,1in)$);
-		\end{tikzpicture}
-		
-		\vspace{-3.5em}
-		\hspace{-0.5em}
-		\begin{minipage}{0.45\textwidth}
-			\begin{flushleft}
-				\includesvg[width=1.75cm]{logouex_transp}
-			\end{flushleft}
-		\end{minipage}
-		
-		\vspace{-6em}
-		\hspace{20em}
-		\begin{minipage}{0.45\textwidth}
-			\begin{flushright}
-				\includesvg[width=4cm]{logoEpcc}
-			\end{flushright}
-		\end{minipage}\\[1.5cm]
-		
-		\begin{center}
-			
-			
-			% Upper part of the page
-			\textsc{\LARGE UNIVERSIDAD DE EXTREMADURA}\\[4cm]
-			
-			\textsc{\Large Escuela Politécnica}\\[0.5cm]
-			\textsc{\Large Nombre de los Estudios}\\[3cm]
-			\textsc{\Large Trabajo Fin de Grado}\\[0.5cm]
-			{ \large \bfseries Título trabajo fin de grado}\\[4.0cm]
-			\vfill
-			% Bottom of the page
-			{\large}
-		\end{center}
-	\end{adjustwidth}
+  \begin{adjustwidth}{-1.5cm}{0cm}
+    \begin{tikzpicture}[remember picture, overlay]
+    \usetikzlibrary{calc}
+    \draw[line width = 1.5pt] ($(current page.north west) + (1in,-1in)$) rectangle ($(current page.south east) + (-1in,1in)$);
+    \end{tikzpicture}
+
+    \vspace{-3.5em}
+    \hspace{-0.5em}
+    \begin{minipage}{0.45\textwidth}
+      \begin{flushleft}
+        \includesvg[width=1.75cm]{logouex_transp}
+      \end{flushleft}
+    \end{minipage}
+
+    \vspace{-6em}
+    \hspace{20em}
+    \begin{minipage}{0.45\textwidth}
+      \begin{flushright}
+        \includesvg[width=4cm]{logoEpcc}
+      \end{flushright}
+    \end{minipage}\\[1.5cm]
+
+    \begin{center}
+        \textsc{\LARGE UNIVERSIDAD DE EXTREMADURA}\\[4cm]
+
+        \textsc{\Large Escuela Politécnica}\\[0.5cm]
+        \textsc{\Large Nombre de los Estudios}\\[3cm]
+        \textsc{\Large Trabajo Fin de Grado}\\[0.5cm]
+          { \large \bfseries Título trabajo fin de grado}\\[4.0cm]
+        \vfill
+        {\large}
+    \end{center}
+  \end{adjustwidth}
 \end{titlepage}
 
 \pagestyle{empty}
 
 \begin{titlepage}
-	\begin{adjustwidth}{-1.5cm}{0cm}
-		\begin{tikzpicture}[remember picture, overlay]
-		\usetikzlibrary{calc}
-		\draw[line width = 1.5pt] ($(current page.north west) + (1in,-1in)$) rectangle ($(current page.south east) + (-1in,1in)$);
-		\end{tikzpicture}
-		
-		\vspace{-3.5em}
-		\hspace{-0.5em}
-		\begin{minipage}{0.45\textwidth}
-			\begin{flushleft}
-				\includesvg[width=1.75cm]{logouex_transp}
-			\end{flushleft}
-		\end{minipage}
-		
-		\vspace{-6em}
-		\hspace{20em}
-		\begin{minipage}{0.45\textwidth}
-			\begin{flushright}
-				\includesvg[width=4cm]{logoEpcc}
-			\end{flushright}
-		\end{minipage}\\[1.5cm]
-		
-		\begin{center}
-			
-			
-			% Upper part of the page
-			\textsc{\LARGE UNIVERSIDAD DE EXTREMADURA}\\[3cm]
-			
-			\textsc{\Large Escuela Politécnica}\\[0.5cm]
-			\textsc{\Large Nombre de los Estudios}\\[2.5cm]
-			\textsc{\Large Trabajo Fin de Grado}\\[0.5cm]
-			{ \large \bfseries Título trabajo fin de grado}\\[4.0cm]			
-			{ \large \bfseries Autor: }\\[0.5cm]
-			{ \large \bfseries Tutor: }\\[0.5cm]
-			{ \large \bfseries Co-Tutor: }\\[0.5cm]
-			\vfill
-			% Bottom of the page
-			{\large}
-		\end{center}
-	\end{adjustwidth}
+    \begin{adjustwidth}{-1.5cm}{0cm}
+        \begin{tikzpicture}[remember picture, overlay]
+        \usetikzlibrary{calc}
+        \draw[line width = 1.5pt] ($(current page.north west) + (1in,-1in)$) rectangle ($(current page.south east) + (-1in,1in)$);
+        \end{tikzpicture}
+
+        \vspace{-3.5em}
+        \hspace{-0.5em}
+        \begin{minipage}{0.45\textwidth}
+            \begin{flushleft}
+                \includesvg[width=1.75cm]{logouex_transp}
+            \end{flushleft}
+        \end{minipage}
+
+        \vspace{-6em}
+        \hspace{20em}
+        \begin{minipage}{0.45\textwidth}
+            \begin{flushright}
+                \includesvg[width=4cm]{logoEpcc}
+            \end{flushright}
+        \end{minipage}\\[1.5cm]
+
+        \begin{center}
+            \textsc{\LARGE UNIVERSIDAD DE EXTREMADURA}\\[3cm]
+
+            \textsc{\Large Escuela Politécnica}\\[0.5cm]
+            \textsc{\Large Nombre de los Estudios}\\[2.5cm]
+            \textsc{\Large Trabajo Fin de Grado}\\[0.5cm]
+            { \large \bfseries Título trabajo fin de grado}\\[4.0cm]
+            { \large \bfseries Autor: }\\[0.5cm]
+            { \large \bfseries Tutor: }\\[0.5cm]
+            { \large \bfseries Co-Tutor: }\\[0.5cm]
+            \vfill
+            {\large}
+        \end{center}
+    \end{adjustwidth}
 \end{titlepage}
 \makeatother
 \thispagestyle{empty}
@@ -199,37 +171,37 @@ EL RESUMEN EN INGLÉS
 
 
 %%%%%%% ESTRUCTURA DEL TFG %%%%%%%%%%%%%%
-% A.PORTADA (según la estructura indicada a continuación) 
-% B.CONTRAPORTADA (según la estructura indicada a continuación) 
-% C.ÍNDICE GENERAL DE CONTENIDOS  
-% D.ÍNDICE DE TABLAS  
-% E.ÍNDICE DE FIGURAS 
-% F.RESUMEN (Podrá incluirse también en inglés, si así lo indica el Tutor1) 
+% A.PORTADA (según la estructura indicada a continuación)
+% B.CONTRAPORTADA (según la estructura indicada a continuación)
+% C.ÍNDICE GENERAL DE CONTENIDOS
+% D.ÍNDICE DE TABLAS
+% E.ÍNDICE DE FIGURAS
+% F.RESUMEN (Podrá incluirse también en inglés, si así lo indica el Tutor1)
 % G.CUERPO DEL TRABAJO (según la estr
-% uctura indicada a continuación) 
-% H.REFERENCIAS BIBLIOGRÁFICAS 
+% uctura indicada a continuación)
+% H.REFERENCIAS BIBLIOGRÁFICAS
 % (Según norma ISO690)
 % I.ANEXOS, si los hubiera
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% Cuerpo del trabajo
-% 1.INTRODUCCIÓN 
-% 2.OBJETIVOS 
-% 3.ANTECEDENTES / ESTADO DEL ARTE 
-% 4.MÉTODOLOGÍA 
-% 5.IMPLEMENTACIÓN Y DESARROLLO (Cuando proceda) 
-% 6.RESULTADOS Y DISCUSIÓN 
-% 7.CONCLUSIONES 
+% 1.INTRODUCCIÓN
+% 2.OBJETIVOS
+% 3.ANTECEDENTES / ESTADO DEL ARTE
+% 4.MÉTODOLOGÍA
+% 5.IMPLEMENTACIÓN Y DESARROLLO (Cuando proceda)
+% 6.RESULTADOS Y DISCUSIÓN
+% 7.CONCLUSIONES
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Tamaño: Normalizado UNE A-4, salvo planos. 
-% Tipo y tamaño de letra del texto: Times New Roman 12 pt, Arial 12 pt o similar. 
-% Interlineado del texto: 1,5 líneas. 
-% Márgenes del texto: Superior, Inferior y Derecha, 2,5 cm; Izquierda, 4 cm. 
-% Numeración de páginas en margen inferior derecha y tamaño 8 pt. 
-% Las  figuras  serán  numeradas  y  tituladas  debajo  de  las  mismas  (indicando  su  fuente  si  no  son  de  elaboración  
-% propia). 
-% Las  tablas  serán  numeradas  y  tituladas  encima  de  las  mismas  (indicando  su  fuente  si  no  son  de  elaboración  
-% propia). 
+% Tamaño: Normalizado UNE A-4, salvo planos.
+% Tipo y tamaño de letra del texto: Times New Roman 12 pt, Arial 12 pt o similar.
+% Interlineado del texto: 1,5 líneas.
+% Márgenes del texto: Superior, Inferior y Derecha, 2,5 cm; Izquierda, 4 cm.
+% Numeración de páginas en margen inferior derecha y tamaño 8 pt.
+% Las  figuras  serán  numeradas  y  tituladas  debajo  de  las  mismas  (indicando  su  fuente  si  no  son  de  elaboración
+% propia).
+% Las  tablas  serán  numeradas  y  tituladas  encima  de  las  mismas  (indicando  su  fuente  si  no  son  de  elaboración
+% propia).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -245,7 +217,11 @@ Esta plantilla sirve como ejemplo de TFG. Las secciones son las que están en la
 \par
 
 \section{Secciones}
-Las secciones se crean con \textit{section}. Las subsecciones y subsubsecciones con \textit{subsection} y \textit{subsubsection}, respectivamente. Si se desea que alguna subsección en concreto no salga en el índice se pueden usar los mismos comandos añadiéndoles un asterisco al final (\textit{subsection*} y \textit{subsubsection*}).
+Las secciones se crean con \textit{section}. Las subsecciones y subsubsecciones
+con \textit{subsection} y \textit{subsubsection}, respectivamente. Si se desea
+que alguna subsección en concreto no salga en el índice se pueden usar los
+mismos comandos añadiéndoles un asterisco al final (\textit{subsection*} y
+\textit{subsubsection*}).
 \par
 Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed eiusmod tempor incidunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquid ex ea commodi consequat. Quis aute iure reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint obcaecat cupiditat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 \subsection{una subsección}
@@ -253,7 +229,8 @@ Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliqu
 \subsection{otra subsección}
 Excepteur sint obcaecat cupiditat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 \subsubsection{subsubsecciones}
-¡Por defecto las subsubsecciones no aparecen en el índice! Este comportamiento se puede cambiar.
+¡Por defecto las subsubsecciones no aparecen en el índice! Este comportamiento se
+puede cambiar.
 
 \section{Citas y referencias}
 Para citar un texto hay que incluirlo en el fichero \textit{LocalBibliography.bib} de esta plantilla. Una vez hecho se puede referenciar usando el comando \textit{cite}~\cite{LaTeX_tutorials}.
@@ -271,7 +248,6 @@ Las imágenes se insertan así:
 \caption[Logo Epcc]{Logo Epcc.\\Fuente:http://www.unex.es/conoce-la-uex/centros/epcc/}
 \label{fig:logoEpcc}
 \end{figure}
-
 
 \chapter{Objetivos}
 Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed eiusmod tempor incidunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquid ex ea commodi consequat. Quis aute iure reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint obcaecat cupiditat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
@@ -291,7 +267,6 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed eiusmod tempor inci
 \chapter{Conclusiones y trabajos futuros}
 Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed eiusmod tempor incidunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquid ex ea commodi consequat. Quis aute iure reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint obcaecat cupiditat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%% ANEXOS %%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -304,8 +279,11 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed eiusmod tempor inci
 Si no se desea incluir anexos, sólo hay que borrar este capítulo.
 \par
 Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed eiusmod tempor
-incidunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquid ex ea commodi consequat. Quis aute iure reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint obcaecat cupiditat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.\\
-
+incidunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
+nostrud exercitation ullamco laboris nisi ut aliquid ex ea commodi consequat.
+Quis aute iure reprehenderit in voluptate velit esse cillum dolore eu fugiat
+nulla pariatur. Excepteur sint obcaecat cupiditat non proident, sunt in culpa
+qui officia deserunt mollit anim id est laborum.\\
 
 \pagebreak
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

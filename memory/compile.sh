@@ -1,2 +1,2 @@
-latexmk -pdf -outdir=out -latexoption=-interaction=nonstopmode  --shell-escape
+latexmk -outdir=out -xelatex
 mv out/thesis.pdf .
