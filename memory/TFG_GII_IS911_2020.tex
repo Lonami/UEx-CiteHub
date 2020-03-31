@@ -1,0 +1,87 @@
+% Guidelines: https://www.unex.es/conoce-la-uex/centros/epcc/informacion-academica/tf-estudios/tfeg/plantillas
+
+% Normalized A4, Times New Roman 12pt (package mathptmx), 1.5 baseline stretch
+% Margin size 2.5cm, except left 4cm
+% Page numbering bottom-right, 8pt
+% Figures and tables numbered, with a title and source (if not our own)
+\documentclass[12pt,a4paper,twoside]{book}
+
+% Note: the usepackage commands are in the same order as the original
+% template. Do not change reorder them to avoid from things breaking.
+\usepackage[spanish, es-tabla]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage[table]{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows,shapes,positioning,shadows,trees}
+\usepackage{amsmath}
+\usepackage{setspace}
+\usepackage{algorithm}
+\usepackage{algorithmicx}
+\usepackage{algpseudocode}
+\algdef{SE}[DOWHILE]{Do}{doWhile}{\algorithmicdo}[1]{\algorithmicwhile\ #1}
+\usepackage{subfig}
+\usepackage{graphicx}
+\usepackage[colorinlistoftodos]{todonotes}
+\usepackage{anysize}
+\marginsize{4cm}{2.5cm}{2.5cm}{2.5cm}
+\usepackage{mathptmx}
+\usepackage{amsfonts}
+\renewcommand{\baselinestretch}{1.5}
+\usepackage{enumerate}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\usepackage[none]{hyphenat}
+\usepackage{float}
+\usepackage{tikz}
+\usetikzlibrary{calc}
+\usepackage{changepage}
+\usepackage{ragged2e}
+\usepackage{listings}
+\usepackage{appendix}
+\usepackage{color}
+
+% These packages were not present in the template
+\usepackage{svg}
+
+\input{preamble.tex}
+
+\begin{document}
+  \sloppy
+  \pagebreak
+
+  % a) Front cover
+  % b) Back cover
+  \input{cover.tex}
+  \thispagestyle{empty}
+  \newpage
+  \thispagestyle{empty}
+
+  % c) Table of contents
+  \pagenumbering{roman}
+  \setcounter{page}{1}
+  \tableofcontents
+  \newpage
+
+  % d) Listing of tables
+  \listoftables
+  \newpage
+
+  % e) Listing of figures
+  \listoffigures
+  \newpage
+
+  % f) Abstract (summary)
+  \input{abstract.tex}
+
+  % g) Body
+  \pagenumbering{arabic}
+  \pagestyle{fancy}
+  \setcounter{page}{1}
+  \input{body.tex}
+
+  % h) Citations
+  \input{citations.tex}
+
+  % i) Appendices (if any)
+  \input{appendix.tex}
+\end{document}
