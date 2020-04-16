@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Generator
+from typing import List, Generator, Iterable
 import statistics
 import itertools
+import abc
 
 
 def pairwise(iterable):
@@ -13,6 +14,19 @@ def pairwise(iterable):
 
 # Default threshold to consider two different data the same
 SIMILARITY_THRESHOLD = 0.9
+
+
+class Comparable(abc.ABC):
+    """
+    Indicates that two models are comparable with instances of itself.
+    """
+
+    @abc.abstractmethod
+    def similarity(self, other: 'Comparable') -> float:
+        """
+        Returns the similarity percentage between this item
+        and another one as a real number between 0 and 1 inclusive.
+        """
 
 
 class Source(Enum):
@@ -50,7 +64,7 @@ Identifier = str
 
 
 @dataclass
-class Author:
+class Author(Comparable):
     """
     Original author data from a certain `Source`.
     """
@@ -60,11 +74,7 @@ class Author:
     last_name: str
     aliases: List[str]
 
-    def similarity(self, other) -> float:
-        """
-        Returns the similarity percentage between this `Author`
-        and another one as a real number between 0 and 1 inclusive.
-        """
+    def similarity(self, other: 'Author') -> float:
         raise NotImplementedError
 
 
@@ -81,56 +91,42 @@ class Publication:
     year: int
     cited_by: List['Publication']
 
-    def similarity(self, other) -> float:
-        """
-        Returns the similarity percentage between this `Publication`
-        and another one as a real number between 0 and 1 inclusive.
-        """
+    def similarity(self, other: 'Publication') -> float:
         raise NotImplementedError
 
 
 @dataclass
-class MergedAuthor:
+class Merge:
     """
-    Indicates that two `Author` are bound together.
+    Represents a merge between two `Comparable` items.
     """
-    left: Author
+    left: Comparable
     kind: MergeType
-    right: Author
+    right: Comparable
 
 
-@dataclass
-class MergedPublication:
-    """
-    Indicates that two `Publication` are bound together.
-    """
-    left: Publication
-    kind: MergeType
-    right: Publication
-
-
-def merge_publications(
-        publications: List[Publication],
+def merge_items(
+        items: Iterable[Comparable],
         threshold: float = SIMILARITY_THRESHOLD,
-) -> Generator[MergedPublication]:
+) -> Generator[Merge]:
     """
-    Merges publications from various sources into one.
+    Merges items from various sources into one.
     """
 
     # Work on a copy, we will be deleting items from the list as we go.
-    publications = publications[:]
+    items = items[:]
 
     similar_groups = []
 
-    while publications:
-        pub_i = publications.pop()
+    while items:
+        item_i = items.pop()
         done = False
 
         # Check if it fits in any of the previous groups
         for group in similar_groups:
-            sim = statistics.mean(pub_i.similarity(pub) for pub in group)
+            sim = statistics.mean(item_i.similarity(pub) for pub in group)
             if sim >= threshold:
-                group.append(pub_i)
+                group.append(item_i)
                 done = True
                 break
 
@@ -139,12 +135,12 @@ def merge_publications(
 
         # If it doesn't fit in any of the previous groups try to pair it with
         # another individual publication.
-        for j in range(len(publications)):
-            pub_j = publications[j]
-            sim = pub_i.similarity(pub_j)
+        for j in range(len(items)):
+            item_j = items[j]
+            sim = item_i.similarity(item_j)
             if sim >= threshold:
-                similar_groups.append([pub_i, pub_j])
-                del publications[j]
+                similar_groups.append([item_i, item_j])
+                del items[j]
                 done = True
                 break
 
@@ -153,9 +149,9 @@ def merge_publications(
 
         # If none of the other publications are similar to this one make a
         # group with this publication alone.
-        similar_groups.append([pub_i])
+        similar_groups.append([item_i])
 
     # Yield the merged results with the similar groups
     for group in similar_groups:
         for left, right in pairwise(group):
-            yield MergedPublication(left=left, kind=MergeType.AUTOMATIC, right=right)
+            yield Merge(left=left, kind=MergeType.AUTOMATIC, right=right)
