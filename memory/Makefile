@@ -5,6 +5,7 @@ LC := latexmk -synctex=1 -latexoption=-interaction=nonstopmode -file-line-error 
 all: build
 
 build: check
+	rm -f $(SRC_NAME).pdf
 	$(LC)
 	mv $(BUILD_DIR)/$(SRC_NAME).pdf .
 
