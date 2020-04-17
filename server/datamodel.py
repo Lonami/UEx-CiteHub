@@ -1,19 +1,32 @@
 from dataclasses import dataclass
 from enum import Enum
 from typing import List, Generator, Iterable
+import difflib
 import statistics
 import itertools
 import abc
-
-
-def pairwise(iterable):
-    a, b = itertools.tee(iterable)
-    next(b, None)
-    return zip(a, b)
-
+from . import utils
 
 # Default threshold to consider two different data the same
-SIMILARITY_THRESHOLD = 0.9
+SIMILARITY_THRESHOLD = 0.8
+
+# Different weights when comparing data
+
+# The titles should be nearly identical so it has the most weight
+WEIGHT_SIMILAR_TITLE = 0.6
+
+# It's important that authors match, however they may go by different names
+WEIGHT_SIMILAR_AUTHORS = 0.3
+
+# The problem is different sources have different cites
+WEIGHT_SIMILAR_CITES = 0.1
+
+# If this ratio of cites is reached, the weight for cites will be maximum
+MAX_SIMILAR_CITES_RATIO = 0.2
+
+# If a shorter title's length is not "close enough" to the length of
+# a longer title's length, then they won't be considered equal at all.
+MAX_TITLE_LENGTH_DIFF_RATIO = 0.1
 
 
 class Comparable(abc.ABC):
@@ -92,7 +105,39 @@ class Publication:
     cited_by: List['Publication']
 
     def similarity(self, other: 'Publication') -> float:
-        raise NotImplementedError
+        shorter, longer = sorted(map(len, (self.title, other.title)))
+        if (longer - shorter) < (longer * MAX_TITLE_LENGTH_DIFF_RATIO):
+            return 0
+
+        title_score = WEIGHT_SIMILAR_TITLE * difflib.SequenceMatcher(
+            None, self.title, other.title).ratio()
+
+        author_score = WEIGHT_SIMILAR_AUTHORS * self.author.similarity(other.author)
+
+        # TODO this may recurse for a very long time if we have
+        #      `cited_by` data for the cites, and those do too, etc.
+        similar_cites = sum(
+            1
+            for a, b in itertools.product(self.cited_by, other.cited_by)
+            if a.similarity(b) >= SIMILARITY_THRESHOLD
+        )
+
+        most_cites = max(map(len, self.cited_by, other.cited_by))
+
+        cite_score = WEIGHT_SIMILAR_CITES * utils.clamp(
+            utils.map_range(
+                similar_cites / most_cites,
+                0,
+                1,
+                0,
+                MAX_SIMILAR_CITES_RATIO
+            ),
+            0,
+            1
+        )
+
+        score = sum((title_score, author_score, cite_score))
+        return utils.clamp(score, 0, 1)
 
 
 @dataclass
@@ -153,5 +198,5 @@ def merge_items(
 
     # Yield the merged results with the similar groups
     for group in similar_groups:
-        for left, right in pairwise(group):
+        for left, right in utils.pairwise(group):
             yield Merge(left=left, kind=MergeType.AUTOMATIC, right=right)
