@@ -156,7 +156,7 @@ class Merge:
 def merge_items(
         items: Iterable[Comparable],
         threshold: float = SIMILARITY_THRESHOLD,
-) -> Generator[Merge]:
+) -> Generator[Merge, None, None]:
     """
     Merges items from various sources into one.
     """
