@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Generator, Iterable
+from typing import List, Generator, Iterable, Optional
 import difflib
 import statistics
 import itertools
@@ -102,7 +102,7 @@ class Publication:
     source: Source
     title: str
     year: int
-    cited_by: List['Publication']
+    cited_by: Optional[List['Publication']]
 
     def similarity(self, other: 'Publication') -> float:
         shorter, longer = sorted(map(len, (self.title, other.title)))
@@ -116,6 +116,8 @@ class Publication:
 
         # TODO this may recurse for a very long time if we have
         #      `cited_by` data for the cites, and those do too, etc.
+        #
+        # TODO the above is addressed by having cited_by optional but we don't handle it
         similar_cites = sum(
             1
             for a, b in itertools.product(self.cited_by, other.cited_by)
