@@ -83,6 +83,7 @@ class Author(Comparable):
     """
 
     iden: Identifier
+    source: Source
     first_name: str
     last_name: str
     aliases: List[str]
