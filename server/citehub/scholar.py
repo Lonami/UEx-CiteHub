@@ -13,6 +13,8 @@ from typing import AsyncGenerator
 import aiohttp
 import bs4
 
+from ..datamodel import Source, Author, Publication
+
 _HOST = 'https://scholar.google.com'
 _HEADERS = {
     'accept-language': 'en-US,en',
@@ -260,3 +262,26 @@ async def fetch_full_publication(session, pub_id):
         'abstract': abstract,
         'citations': citations,
     }
+
+
+def adapt_author(author: dict) -> Author:
+    name_parts = author['name'].split(maxsplit=1)
+
+    return Author(
+        iden=author['id'],
+        source=Source.GOOGLE_SCHOLAR,
+        first_name=name_parts[0],
+        last_name=name_parts[1] if len(name_parts) > 1 else '',
+        aliases=[],
+    )
+
+
+def adapt_publication(pub: dict, author: Author) -> Publication:
+    return Publication(
+        iden=pub['id'],
+        author=author,
+        source=Source.GOOGLE_SCHOLAR,
+        title=author['name'],
+        year=pub['year'],
+        cited_by=None  # TODO
+    )
