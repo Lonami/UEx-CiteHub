@@ -24,8 +24,11 @@ _COOKIES = {
 }
 
 _PAGE_SIZE = 100
+
 _URL_SEARCH_AUTHOR = '/citations?view_op=search_authors&hl=en&mauthors={}'
 _URL_AUTHOR = f'/citations?hl=en&user={{}}&pagesize={_PAGE_SIZE}'
+_URL_PUBLICATION = '/citations?view_op=view_citation&hl=en&citation_for_view={}'
+
 _USER_RE = re.compile(r'user=([^&]+)')
 _CITATION_RE = re.compile(r'citation_for_view=([\w-]*:[\w-]*)')
 
@@ -174,12 +177,86 @@ async def search_author(session: aiohttp.ClientSession, name: str, *, full=True)
         for row in soup.find_all('div', 'gsc_1usr'):
             author = _analyze_basic_author_soup(row)
             if full:
-                yield await fetch_full_author(session, author['id'])
-            else:
-                yield author
+                author = await fetch_full_author(session, author['id'])
+                author['publications'] = [
+                    await fetch_full_publication(session, pub['id'])
+                    for pub in author['publications']
+                ]
+
+            yield author
 
         nav_next = soup.find(class_='gs_btnPR gs_in_ib gs_btn_half gs_btn_lsb gs_btn_srt gsc_pgn_pnx')
         if nav_next and 'disabled' not in nav_next.attrs:
             path = codecs.getdecoder('unicode_escape')(nav_next['onclick'][17:-1])[0]
         else:
             path = None
+
+
+async def fetch_full_publication(session, pub_id):
+    soup = await _get_page(session, _URL_PUBLICATION.format(pub_id))
+
+    title = soup.find('div', id='gsc_vcd_title').text
+    authors = None
+    date = None
+    journal = None
+    volume = None
+    issue = None
+    page_range = None
+    publisher = None
+    abstract = None
+    citations_url = None
+    citations = []
+
+    for row in soup.find('div', id='gsc_vcd_table').children:
+        key = row.find('div', class_='gsc_vcd_field').text
+        val = row.find('div', class_='gsc_vcd_value').text
+        if key == 'Authors':
+            authors = list(map(str.strip, val.split(',')))
+        elif key == 'Publication date':
+            date = val
+        elif key == 'Journal':
+            journal = val
+        elif key == 'Volume':
+            volume = val
+        elif key == 'Issue':
+            issue = val
+        elif key == 'Pages':
+            page_range = val
+        elif key == 'Publisher':
+            publisher = val
+        elif key == 'Description':
+            abstract = val
+        elif key == 'Total citations':
+            citations_url = row.find('a')['href']
+
+    if citations_url is not None:
+        soup = await _get_page(session, url=citations_url)
+        path = None
+        while True:
+            for row in soup.find_all('div', 'gs_or'):
+                a_val = row.find(class_='gs_a').text.split('-')[0]
+                citations.append({
+                    'name': row.find(class_='gs_rt').a.text,
+                    'authors': list(map(str.strip, a_val.split(','))),
+                    'abstract': row.find(class_='gs_rs').text,
+                })
+
+            if soup.find(class_='gs_ico gs_ico_nav_next'):
+                path = soup.find(class_='gs_ico gs_ico_nav_next').parent['href']
+                soup = await _get_page(session, path)
+            else:
+                break
+
+    return {
+        'id': pub_id,
+        'name': title,
+        'authors': authors,
+        'date': date,
+        'journal': journal,
+        'volume': volume,
+        'issue': issue,
+        'page_range': page_range,
+        'publisher': publisher,
+        'abstract': abstract,
+        'citations': citations,
+    }
