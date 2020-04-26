@@ -30,11 +30,14 @@ _USER_RE = re.compile(r'user=([^&]+)')
 _CITATION_RE = re.compile(r'citation_for_view=([\w-]*:[\w-]*)')
 
 
-async def _get_page(session: aiohttp.ClientSession, path: str) -> bs4.BeautifulSoup:
-    async with session.get(_HOST + path, headers=_HEADERS, cookies=_COOKIES) as resp:
+async def _get_page(session: aiohttp.ClientSession, path: str = '', url: str = None) -> bs4.BeautifulSoup:
+    if not url:
+        url = _HOST + path
+
+    async with session.get(url, headers=_HEADERS, cookies=_COOKIES) as resp:
         resp.raise_for_status()
-        html = await resp.text()
-        return bs4.BeautifulSoup(html.replace('\xa0', ' '), 'html.parser')
+        html = (await resp.text()).replace('\xa0', ' ')
+        return bs4.BeautifulSoup(html, 'html.parser')
 
 
 def _analyze_basic_author_soup(soup) -> dict:
