@@ -1,4 +1,4 @@
 data/
 *.ini
-
+memory/
 !example-server-config.ini
