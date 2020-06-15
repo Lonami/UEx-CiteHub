@@ -19,13 +19,8 @@ NetworkError.prototype = Object.create(Error.prototype, {
 });
 Object.setPrototypeOf(NetworkError, Error);
 
-async function query(endpoint) {
-    const res = await fetch(endpoint, {
-        // "To automatically send cookies for the current domain, this option must be provided."
-        // https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/fetch
-        // Further reading: https://developer.mozilla.org/en-US/docs/Web/API/Request/credentials
-        credentials: 'include'
-    });
+async function fetch_json(resource, init) {
+    const res = await fetch(resource, init);
     if (res.ok) {
         return await res.json();
     } else {
@@ -34,5 +29,16 @@ async function query(endpoint) {
 }
 
 export function get_publications() {
-    return query('/rest/publications');
+    return fetch_json('/rest/publications');
+}
+
+export function get_profile() {
+    return fetch_json('/rest/profile');
+}
+
+export function save_profile(data) {
+    return fetch_json('/rest/profile', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    });
 }

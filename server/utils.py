@@ -1,3 +1,5 @@
+import asyncio
+import functools
 import itertools
 
 
@@ -17,3 +19,14 @@ def clamp(x, low, high):
 
 def map_range(x, old_low, old_high, new_low, new_high):
     return new_low + ((x - old_low) * (new_high - new_low) / (old_high - old_low))
+
+
+def locked(func):
+    lock = asyncio.Lock()
+
+    @functools.wraps(func)
+    async def wrapped(*args, **kwargs):
+        async with lock:
+            return await func(*args, **kwargs)
+
+    return wrapped
