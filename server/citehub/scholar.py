@@ -1,13 +1,11 @@
 """
 An asyncio and modern alternative to https://pypi.org/project/scholarly/.
 """
-import base64
+import asyncio
 import codecs
-import os
+import random
 import re
-import time
 import urllib.parse
-
 from typing import AsyncGenerator
 
 import aiohttp
@@ -17,12 +15,13 @@ from ..datamodel import Source, Author, Publication
 
 _HOST = 'https://scholar.google.com'
 _HEADERS = {
-    'accept-language': 'en-US,en',
-    'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:73.0) Gecko/20100101 Firefox/73.0',
-    'accept': 'text/html,application/xhtml+xml,application/xml'
-}
-_COOKIES = {
-    'GSP': 'LM={}:S={}'.format(int(time.time()), base64.urlsafe_b64encode(os.urandom(12)))
+    "Accept": "text/html,application/xhtml+xml,application/xml;*/*",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Accept-Language": "en-US",
+    "Cookie": "NID=203=vlT7m1DDdoWUifNI20xIboEeWZhbdMDcJbPP52iWy2-DPUww4USzNMKUqZCHn4HJCjBmACqej7LzqA1mkpVx4rtVCvAl1JZrw9rbMHOarMA_oyxzhC_zBEcs-Yr_YFQjjP-mM9doFIUKgb0HXjJB4eiSF6FGY7dxKME-VAi27f2DuOpBSuO4yKsYYTVT9Ek9oBscWCwdgCLxwwwAOdAPbz0F; GSP=A=bl17_A:CPTS=1588243844:LM=1588243844:S=ENX3yc3St4asJnMT; 1P_JAR=2020-04-30-09; SID=wQdzQm6xVVbBRFM6p2wvHyg94TF1IKRqi_HswbQpwHSm7CSfwLY0jBLU8iybA0M3lshdew.; __Secure-3PSID=wQdzQm6xVVbBRFM6p2wvHyg94TF1IKRqi_HswbQpwHSm7CSfQeP6FtOiPTlz9FP9_-4B0Q.; HSID=AglcJQqcUSuMMXjvJ; SSID=AlQxjS1laOR7CJFWO; APISID=bStucEx6CbBCatNj/AoFMuVqLoVzwmbvcu; SAPISID=Md2nISlNjMpqb6C-/Avf8qIllpoKlHDv4i; __Secure-HSID=AglcJQqcUSuMMXjvJ; __Secure-SSID=AlQxjS1laOR7CJFWO; __Secure-APISID=bStucEx6CbBCatNj/AoFMuVqLoVzwmbvcu; __Secure-3PAPISID=Md2nISlNjMpqb6C-/Avf8qIllpoKlHDv4i; SIDCC=AJi4QfEwefW2gbjEmtXdANO43xvGO5y-gZc1mHtETsqIERUvQ7ThoSe0icypAZtMYXpiWufMWE4",
+    "Host": "scholar.google.com",
+    "Upgrade-Insecure-Requests": "1",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.75.14 (KHTML, like Gecko) Version/7.0.3 Safari/7046A194A",
 }
 
 _PAGE_SIZE = 100
@@ -39,10 +38,25 @@ async def _get_page(session: aiohttp.ClientSession, path: str = '', url: str = N
     if not url:
         url = _HOST + path
 
-    async with session.get(url, headers=_HEADERS, cookies=_COOKIES) as resp:
-        resp.raise_for_status()
-        html = (await resp.text()).replace('\xa0', ' ')
-        return bs4.BeautifulSoup(html, 'html.parser')
+    try:
+        with open('cache/' + url.replace('/', '_')) as fd:
+            return bs4.BeautifulSoup(fd.read(), 'html.parser')
+    except OSError:
+        pass
+
+    # sucks but hopefully avoids captcha
+    await asyncio.sleep(5 + random.uniform(0, 5))
+    while True:
+        async with session.get(url, headers=_HEADERS) as resp:
+            resp.raise_for_status()
+            html = (await resp.text()).replace('\xa0', ' ')
+            if 'id="gs_captcha_f"' in html:
+                input('After solving the captcha above press enter to continue')
+
+            else:
+                with open('cache/' + url.replace('/', '_'), 'w') as fd:
+                    fd.write(html)
+                return bs4.BeautifulSoup(html, 'html.parser')
 
 
 def _analyze_basic_author_soup(soup) -> dict:
