@@ -15,10 +15,10 @@ async def fetch_google_scholar(session, full_name):
     from . import scholar
 
     cached = STORAGE_ROOT / f'gscholar {full_name}'
-    if cached.is_file():
-        LOGGER.info('[gscholar] Loading cached author %s', full_name)
-        with cached.open(encoding='utf-8') as fd:
-            return json.load(fd)
+    #if cached.is_file():
+    #    LOGGER.info('[gscholar] Loading cached author %s', full_name)
+    #    with cached.open(encoding='utf-8') as fd:
+    #        return json.load(fd)
 
     async for author in scholar.search_author(session, full_name):
         LOGGER.info('[gscholar] Saving author to cache %s', full_name)
