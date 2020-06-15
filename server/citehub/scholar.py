@@ -237,10 +237,11 @@ async def fetch_full_publication(session, pub_id):
         while True:
             for row in soup.find_all('div', 'gs_or'):
                 a_val = row.find(class_='gs_a').text.split('-')[0]
+                abstract = row.find(class_='gs_rs')
                 citations.append({
-                    'name': row.find(class_='gs_rt').a.text,
+                    'name': row.find('h3').text,
                     'authors': list(map(str.strip, a_val.split(','))),
-                    'abstract': row.find(class_='gs_rs').text,
+                    'abstract': abstract.text if abstract else None,
                 })
 
             if soup.find(class_='gs_ico gs_ico_nav_next'):
