@@ -12,6 +12,7 @@ import aiohttp
 import bs4
 
 from ..datamodel import Source, Author, Publication
+from ..crawler import Task
 
 _HOST = 'https://scholar.google.com'
 _HEADERS = {
@@ -113,10 +114,13 @@ def _analyze_basic_publication_soup(soup) -> dict:
     }
 
 
-async def fetch_full_author(session, author_id):
-    soup = await _get_page(session, _URL_AUTHOR.format(author_id))
+def parse_author_profile(soup):
+    # TODO maybe remove most parsing if we don't care about the data.
+    #      it's in the git history if we ever need it anyway.
+    #
+    # TODO this should probably return a proper Profile
     name = soup.find('div', id='gsc_prf_in').text
-    url_picture = _HOST + '/citations?view_op=medium_photo&user={}'.format(author_id)
+    url_picture = soup.find('img', id='gsc_prf_pup-img').src
 
     email = soup.find('div', 'gsc_prf_il').text
     if email:
@@ -154,21 +158,10 @@ async def fetch_full_author(session, author_id):
             'affiliation': row.find(class_='gsc_rsb_a_ext').text,
         })
 
-    offset = 0
-    publications = []
-    while True:
-        for row in soup.find_all('tr', class_='gsc_a_tr'):
-            publications.append(_analyze_basic_publication_soup(row))
+    publications, offset = parse_author_profile_publications(soup)
 
-        if 'disabled' in soup.find('button', id='gsc_bpf_more').attrs:
-            break
-
-        offset += _PAGE_SIZE
-        soup = await _get_page(session, _URL_AUTHOR.format(author_id) + f'&cstart={offset}')
-
-    return {
+    data = {
         'name': name,
-        'id': author_id,
         'url_picture': url_picture,
         'affiliation': affiliation,
         'email': email,
@@ -183,34 +176,19 @@ async def fetch_full_author(session, author_id):
         'coauthors': coauthors,
         'publications': publications,
     }
+    return data, offset
 
 
-async def search_author(session: aiohttp.ClientSession, name: str, *, full=True) -> AsyncGenerator[dict, None]:
-    path = _URL_SEARCH_AUTHOR.format(urllib.parse.quote(name))
-    while path is not None:
-        soup = await _get_page(session, path)
+def parse_author_profile_publications(soup):
+    publications = []
+    for row in soup.find_all('tr', class_='gsc_a_tr'):
+        publications.append(_analyze_basic_publication_soup(row))
 
-        for row in soup.find_all('div', 'gsc_1usr'):
-            author = _analyze_basic_author_soup(row)
-            if full:
-                author = await fetch_full_author(session, author['id'])
-                author['publications'] = [
-                    await fetch_full_publication(session, pub['id'])
-                    for pub in author['publications']
-                ]
-
-            yield author
-
-        nav_next = soup.find(class_='gs_btnPR gs_in_ib gs_btn_half gs_btn_lsb gs_btn_srt gsc_pgn_pnx')
-        if nav_next and 'disabled' not in nav_next.attrs:
-            path = codecs.getdecoder('unicode_escape')(nav_next['onclick'][17:-1])[0]
-        else:
-            path = None
+    offset = 'disabled' not in soup.find('button', id='gsc_bpf_more').attrs
+    return publications, offset
 
 
-async def fetch_full_publication(session, pub_id):
-    soup = await _get_page(session, _URL_PUBLICATION.format(pub_id))
-
+def parse_publication(soup):
     title = soup.find('div', id='gsc_vcd_title').text
     authors = None
     date = None
@@ -221,7 +199,6 @@ async def fetch_full_publication(session, pub_id):
     publisher = None
     abstract = None
     citations_url = None
-    citations = []
 
     for row in soup.find('div', id='gsc_vcd_table').children:
         key = row.find('div', class_='gsc_vcd_field').text
@@ -245,27 +222,7 @@ async def fetch_full_publication(session, pub_id):
         elif key == 'Total citations':
             citations_url = row.find('a')['href']
 
-    if citations_url is not None:
-        soup = await _get_page(session, url=citations_url)
-        path = None
-        while True:
-            for row in soup.find_all('div', 'gs_or'):
-                a_val = row.find(class_='gs_a').text.split('-')[0]
-                abstract = row.find(class_='gs_rs')
-                citations.append({
-                    'name': row.find('h3').text,
-                    'authors': list(map(str.strip, a_val.split(','))),
-                    'abstract': abstract.text if abstract else None,
-                })
-
-            if soup.find(class_='gs_ico gs_ico_nav_next'):
-                path = soup.find(class_='gs_ico gs_ico_nav_next').parent['href']
-                soup = await _get_page(session, path)
-            else:
-                break
-
-    return {
-        'id': pub_id,
+    data = {
         'name': title,
         'authors': authors,
         'date': date,
@@ -275,10 +232,32 @@ async def fetch_full_publication(session, pub_id):
         'page_range': page_range,
         'publisher': publisher,
         'abstract': abstract,
-        'citations': citations,
     }
 
+    return data, citations_url
 
+
+def parse_citations(soup):
+    citations = []
+    for row in soup.find_all('div', 'gs_or'):
+        a_val = row.find(class_='gs_a').text.split('-')[0]
+        abstract = row.find(class_='gs_rs')
+        citations.append({
+            'name': row.find('h3').text,
+            'authors': list(map(str.strip, a_val.split(','))),
+            'abstract': abstract.text if abstract else None,
+        })
+
+    if soup.find(class_='gs_ico gs_ico_nav_next'):
+        path = soup.find(class_='gs_ico gs_ico_nav_next').parent['href']
+        next_url = _HOST + path
+    else:
+        next_url = None
+
+    return citations, next_url
+
+
+# TODO remove these?
 def adapt_author(author: dict) -> Author:
     name_parts = author['name'].split(maxsplit=1)
 
@@ -300,3 +279,104 @@ def adapt_publication(pub: dict, author: Author) -> Publication:
         year=pub['year'],
         cited_by=None  # TODO
     )
+
+
+def author_id_from_url(url):
+    url = urllib.parse.urlparse(url)
+    assert url.netloc == 'scholar.google.com'
+    assert url.path == '/citations'
+    query = urllib.parse.parse_qs(url.query)
+    return query['user'][0]
+
+
+PROFILE_DELAY = 5 * 60
+PUBLICATION_DELAY = 60 * 60
+CITATION_DELAY = 5 * 60
+FULL_DELAY = 24 * 60 * 60
+
+
+class CrawlScholar(Task):
+    def __init__(self, author_id):
+        super().__init__()
+        self._author_id = author_id
+        self._stage = 0  # int
+        self._offset = None  # int
+        self._cit_offset = None  # url
+
+    def _load(self, data):
+        self._author_id = data['author_id']
+        self._stage = data['stage']
+        self._offset = data['offset']
+        self._cit_offset = data['cit-offset']
+
+    def _save(self):
+        return {
+            'author_id': self._author_id,
+            'stage': self._stage,
+            'offset': self._offset,
+            'cit-offset': self._cit_offset,
+        }
+
+    async def _step(self, session, profile):
+        # Initial load
+        if self._stage == 0:
+            soup = await _get_page(session, _URL_AUTHOR.format(self._author_id))
+            data, pubs_remain = parse_author_profile(soup)
+            if pubs_remain:
+                self._stage = 1
+                self._offset = _PAGE_SIZE
+                return PROFILE_DELAY
+            else:
+                self._offset = -1
+                return self._next_pub_offset(profile)
+
+            # TODO once we use a Profile we could have a .update() method to avoid pitfalls
+            profile.full_name = data['name']
+            profile.publications = data['publications']
+
+        # Main page but with more results (offset advances by page size)
+        elif self._stage == 1:
+            soup = await _get_page(session, _URL_AUTHOR.format(self._author_id) + f'&cstart={self._offset}')
+            data, pubs_remain = parse_author_profile_publications(soup)
+            if pubs_remain:
+                # stay in stage 1
+                self._offset += _PAGE_SIZE
+                return PROFILE_DELAY
+            else:
+                self._offset = -1
+                return self._next_pub_offset(profile)  # stage 2 or 4
+
+            profile.publications.extend(data)
+
+        # Publications, one by one (offset is an index into the publications)
+        elif self._stage == 2:
+            soup = await _get_page(session, _URL_PUBLICATION.format(profile.publications[self._offset].id))
+            data, cit_url = parse_publication(soup)
+
+            if cit_url:
+                self._stage = 3
+                self._cit_offset = cit_url
+                return CITATION_DELAY
+            else:
+                return self._next_pub_offset(profile)  # stage 2 or 4
+
+        # Parsing citation pages
+        elif self._stage == 3:
+            soup = await _get_page(session, url=self._cit_offset)
+            data, cit_url = parse_citations(soup)
+
+            if cit_url:
+                # stay in stage 3
+                self._cit_offset = cit_url
+                return CITATION_DELAY
+            else:
+                return self._next_pub_offset(profile)  # stage 2 or 4
+
+    def _next_pub_offset(self, profile):
+        self._offset += 1
+        if self._offset >= len(profile.publications):
+            self._stage = 0
+            return FULL_DELAY
+        else:
+            self._stage = 2
+            return PUBLICATION_DELAY

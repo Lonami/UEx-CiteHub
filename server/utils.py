@@ -1,5 +1,6 @@
 import asyncio
 import functools
+import heapq
 import itertools
 
 
@@ -30,3 +31,22 @@ def locked(func):
             return await func(*args, **kwargs)
 
     return wrapped
+
+
+class Heap:
+    """Pythonic heap."""
+    def __init__(self, iterable=()):
+        self._heap = list(iterable)
+        heapq.heapify(self._heap)
+
+    def push(self, item):
+        heapq.heappush(self._heap, item)
+
+    def pop(self):
+        return heapq.heappop(self._heap)
+
+    def peek(self):
+        return self._heap[0]
+
+    def __bool__(self):
+        return bool(self._heap)
