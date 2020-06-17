@@ -5,21 +5,41 @@ import os
 import subprocess
 import sys
 
+import aiohttp
 from aiohttp import ClientSession, web
 
 from . import helpers, rest
+from .crawler import Crawler
+
 
 class Server:
     def __init__(self, app):
         self._app = app
 
     def run(self):
-        loop = asyncio.get_event_loop()
+        asyncio.get_event_loop().run_until_complete(self._run())
+
+    async def _run(self):
+        runner = web.AppRunner(
+            self._app,
+            handle_signals=True,
+            access_log_class=aiohttp.web_log.AccessLogger,
+            access_log_format=aiohttp.web_log.AccessLogger.LOG_FORMAT,
+            access_log=aiohttp.log.access_logger
+        )
+
+        await runner.setup()
+        site = aiohttp.web_runner.TCPSite(runner)
 
         try:
-            web.run_app(self._app)
+            async with self._app['client'], self._app['crawler']:
+                await site.start()
+                print('Running on:', site.name)
+                while True:
+                    await asyncio.sleep(60 * 60)
         finally:
-            loop.run_until_complete(self._app['client'].close())
+            await runner.cleanup()
+
 
 def create_app():
     # Determine config path
@@ -73,6 +93,7 @@ def create_app():
     app = web.Application()
     app['config'] = config
     app['client'] = ClientSession()
+    app['crawler'] = Crawler()
 
     # Define routes
     app.router.add_routes([

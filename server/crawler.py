@@ -1,15 +1,18 @@
 import abc
 import asyncio
+import heapq
 import logging
 import random
 import time
 
+from . import utils
+
 
 DELAY_JITTER_PERCENT = 0.05
+MAX_SLEEP = 60
 
 
-@abc.ABC
-class Task:
+class Task(abc.ABC):
     def __init__(self):
         self._due = 0
 
@@ -46,8 +49,8 @@ class Task:
         jitter = random.uniform(-jitter_range, jitter_range)
         self._due = asyncio.get_event_loop().time() + delay + jitter
 
-    async def ready(self):
-        return asyncio.get_event_loop().time() >= self._due
+    def remaining_delay(self):
+        return self._due - asyncio.get_event_loop().time()
 
     def __lt__(self, other):
         return self._due < other._due
@@ -56,28 +59,50 @@ class Task:
         return self._due > other._due
 
 
-
 class Crawler:
-    def __init__(self, file, profile):
-        self._file = file
-        self._profile = profile
-        self._task = None
+    # The crawler just runs tasks
+    def __init__(self):
+        self._crawl_task = None
+        self._tasks = []
 
     async def _crawl(self):
         while True:
-            pass
+            if not self._tasks:
+                await asyncio.sleep(MAX_SLEEP)
+                continue
+
+            task = self._tasks[0]
+            delay = task.remaining_delay()
+            if delay > MAX_SLEEP:
+                await asyncio.sleep(MAX_SLEEP)
+                continue
+
+            await asyncio.sleep(delay)
+            await task.step()
+            self._tasks.sort()
+
+    def add_task(self, task):
+        # Only one class per type (subclasses are considered different)
+        for i, t in enumerate(self._tasks):
+            if type(t) == type(task):
+                self._tasks[i] = task
+                break
+        else:
+            self._tasks.append(task)
+
+        self._tasks.sort()
 
     async def __aenter__(self):
-        self._task = asyncio.create_task(self._crawl())
+        self._crawl_task = asyncio.create_task(self._crawl())
         return self
 
     async def __aexit__(self, *args):
-        self._task.cancel()
+        self._crawl_task.cancel()
         try:
-            await self._task
+            await self._crawl_task
         except asyncio.CancelledError:
             pass
         except Exception:
             logging.exception('unhandled exception in crawl task')
         finally:
-            self._task = None
+            self._crawl_task = None
