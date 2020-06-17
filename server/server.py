@@ -5,6 +5,8 @@ import os
 import subprocess
 import sys
 
+from pathlib import Path
+
 import aiohttp
 from aiohttp import ClientSession, web
 
@@ -93,7 +95,7 @@ def create_app():
     app = web.Application()
     app['config'] = config
     app['client'] = ClientSession()
-    app['crawler'] = Crawler()
+    app['crawler'] = Crawler(Path(config['storage']['root']))
 
     # Define routes
     app.router.add_routes([

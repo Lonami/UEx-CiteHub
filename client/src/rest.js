@@ -32,12 +32,12 @@ export function get_publications() {
     return fetch_json('/rest/publications');
 }
 
-export function get_profile() {
-    return fetch_json('/rest/profile');
+export function get_sources() {
+    return fetch_json('/rest/sources');
 }
 
-export function save_profile(data) {
-    return fetch_json('/rest/profile', {
+export function save_sources(data) {
+    return fetch_json('/rest/sources', {
         method: 'POST',
         body: JSON.stringify(data)
     });

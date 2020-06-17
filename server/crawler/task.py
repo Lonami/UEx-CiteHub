@@ -1,18 +1,14 @@
 import abc
 import asyncio
-import heapq
-import logging
-import random
 import time
-
-from . import utils
 
 
 DELAY_JITTER_PERCENT = 0.05
-MAX_SLEEP = 60
 
 
 class Task(abc.ABC):
+    # Every different external source uses its own `Task` for crawling profiles, and the
+    # subclasses know how to update the profile data.
     def __init__(self):
         self._due = 0
 
@@ -57,52 +53,3 @@ class Task(abc.ABC):
 
     def __gt__(self, other):
         return self._due > other._due
-
-
-class Crawler:
-    # The crawler just runs tasks
-    def __init__(self):
-        self._crawl_task = None
-        self._tasks = []
-
-    async def _crawl(self):
-        while True:
-            if not self._tasks:
-                await asyncio.sleep(MAX_SLEEP)
-                continue
-
-            task = self._tasks[0]
-            delay = task.remaining_delay()
-            if delay > MAX_SLEEP:
-                await asyncio.sleep(MAX_SLEEP)
-                continue
-
-            await asyncio.sleep(delay)
-            await task.step()
-            self._tasks.sort()
-
-    def add_task(self, task):
-        # Only one class per type (subclasses are considered different)
-        for i, t in enumerate(self._tasks):
-            if type(t) == type(task):
-                self._tasks[i] = task
-                break
-        else:
-            self._tasks.append(task)
-
-        self._tasks.sort()
-
-    async def __aenter__(self):
-        self._crawl_task = asyncio.create_task(self._crawl())
-        return self
-
-    async def __aexit__(self, *args):
-        self._crawl_task.cancel()
-        try:
-            await self._crawl_task
-        except asyncio.CancelledError:
-            pass
-        except Exception:
-            logging.exception('unhandled exception in crawl task')
-        finally:
-            self._crawl_task = None

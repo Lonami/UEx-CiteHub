@@ -1,6 +1,6 @@
 <script>
 import { onMount } from 'svelte';
-import { get_profile, save_profile } from './rest.js';
+import { get_sources, save_sources } from './rest.js';
 
 let scholar_input;
 let submit_button;
@@ -13,10 +13,10 @@ let last_error = null;
 
 async function init() {
     try {
-        let profile = await get_profile();
+        let sources = await get_sources();
 
         form_inputs.forEach(input => {
-            input.value = profile[input.name];
+            input.value = sources[input.name];
         });
     } catch (e) {
         last_error = e;
@@ -31,11 +31,11 @@ async function save_details() {
     submit_button.disabled = true;
     submit_button.value = 'Saving…';
     try {
-        let data = {};
+        let sources = {};
         form_inputs.forEach(input => {
-            data[input.name] = input.value;
+            sources[input.name] = input.value;
         });
-        await save_profile(data);
+        await save_sources(sources);
     } catch (e) {
         last_error = e;
     } finally {

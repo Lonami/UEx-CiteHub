@@ -5,7 +5,7 @@ from pathlib import Path
 
 from aiohttp import web
 
-from . import citehub, constants, utils
+from . import utils
 
 def adapt_scholar_publication(data):
     return {
@@ -76,6 +76,7 @@ def merge_sorted_result(result):
         i += 1
 
 async def get_publications(request):
+    raise NotImplementedError
     result = []
 
     # Google Scholar
@@ -109,36 +110,18 @@ async def get_publications(request):
     return web.json_response(result)
 
 
-def get_profile(request):
-    # TODO accessing config like this is kind of nasty
-    file = Path(request.app['config']['storage']['root'], constants.PROFILE_FILE)
-    profile = {
-        'gs-profile-url': '',
-    }
-    try:
-        with file.open(encoding='utf-8') as fd:
-            profile.update(json.load(fd))
-    except (OSError, json.JSONDecodeError):
-        pass
-
-    return web.json_response(profile)
+def get_sources(request):
+    return web.json_response(request.app['crawler'].get_sources())
 
 
 @utils.locked
-async def save_profile(request):
-    file = Path(request.app['config']['storage']['root'], constants.PROFILE_FILE)
-    if not file.parent.is_dir():
-        file.parent.mkdir(exist_ok=True)
-
-    with file.open('w', encoding='utf-8') as fd:
-        fd.write(await request.text())
-
-    # TODO schedule crawling (and maybe de-schedule previous ones)
-    return web.Response()
+async def save_sources(request):
+    request.app['crawler'].update_sources(await request.json())
+    return web.json_response({})
 
 
 ROUTES = [
     web.get('/rest/publications', get_publications),
-    web.get('/rest/profile', get_profile),
-    web.post('/rest/profile', save_profile),
+    web.get('/rest/sources', get_sources),
+    web.post('/rest/sources', save_sources),
 ]

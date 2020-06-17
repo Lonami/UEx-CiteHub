@@ -1,6 +1,3 @@
-"""
-An asyncio and modern alternative to https://pypi.org/project/scholarly/.
-"""
 import asyncio
 import codecs
 import random
@@ -11,8 +8,8 @@ from typing import AsyncGenerator
 import aiohttp
 import bs4
 
+from .task import Task
 from ..datamodel import Source, Author, Publication
-from ..crawler import Task
 
 _HOST = 'https://scholar.google.com'
 _HEADERS = {
@@ -296,12 +293,19 @@ FULL_DELAY = 24 * 60 * 60
 
 
 class CrawlScholar(Task):
-    def __init__(self, author_id):
+    def __init__(self):
         super().__init__()
-        self._author_id = author_id
+        self._author_id = None  # str
         self._stage = 0  # int
         self._offset = None  # int
         self._cit_offset = None  # url
+
+    def set_url(self, url):
+        # TODO url changes should adjust the task storage
+        self._author_id = author_id_from_url(url)
+        self._stage = 0
+        self._offset = None
+        self._cit_offset = None
 
     def _load(self, data):
         self._author_id = data['author_id']
@@ -318,6 +322,9 @@ class CrawlScholar(Task):
         }
 
     async def _step(self, session, profile):
+        if not self._author_id:
+            return FULL_DELAY
+
         # Initial load
         if self._stage == 0:
             soup = await _get_page(session, _URL_AUTHOR.format(self._author_id))

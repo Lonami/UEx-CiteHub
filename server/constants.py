@@ -1,1 +1,1 @@
-PROFILE_FILE = 'profile.json'
+SCHOLAR_PROFILE_URL = 'gs-profile-url'
