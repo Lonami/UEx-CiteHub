@@ -25,6 +25,9 @@ class Server:
             pass
 
     async def _run(self):
+        # Have to do this inside a coroutine to keep `aiohttp` happy
+        self._app['crawler'] = Crawler(Path(self._app['config']['storage']['root']))
+
         runner = web.AppRunner(
             self._app,
             access_log_class=aiohttp.web_log.AccessLogger,
@@ -98,7 +101,6 @@ def create_app():
     logging.info('creating aiohttp server...')
     app = web.Application()
     app['config'] = config
-    app['crawler'] = Crawler(Path(config['storage']['root']))
 
     # Define routes
     app.router.add_routes([
