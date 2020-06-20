@@ -7,8 +7,9 @@ import random
 import time
 from pathlib import Path
 
-from .. import constants, utils
 from .scholar import CrawlScholar
+from .. import constants, utils
+from ..jsonfile import JsonFile
 
 MAX_SLEEP = 60
 
@@ -17,46 +18,6 @@ MAX_SLEEP = 60
 #
 # TODO be careful when updating our own publications, it might've been saved previously as a
 #      citation (marked as not ours)
-
-# TODO this might be a bit overkill
-class _JsonFile:
-    def __init__(self, path: Path, data):
-        self._path = path
-        self._data = data
-
-    def load(self):
-        try:
-            with self._path.open(encoding='utf-8') as fd:
-                data = json.load(fd)
-        except FileNotFoundError:
-            return
-
-        for key, value in data.items():
-            if key in self._data:
-                self._data[key] = value
-            else:
-                # TODO warn about bad key
-                pass
-
-    def save(self):
-        if not self._path.parent.is_dir():
-            self._path.parent.mkdir()
-
-        with self._path.open('w', encoding='utf-8') as fd:
-            json.dump(self._data, fd)
-
-    def as_dict(self):
-        return self._data.copy()  # no immutable dicts so make a copy
-
-    def __getitem__(self, key):
-        return self._data[key]
-
-    def __setitem__(self, key, value):
-        assert key in self._data
-        self._data[key] = value
-
-    def __contains__(self, key):
-        return key in self._data
 
 class _Tasks:
     # A class to namespace all the various tasks
@@ -89,7 +50,7 @@ class Crawler:
     def __init__(self, storage_root: Path):
         self._root = storage_root
         self._crawl_task = None
-        self._sources = _JsonFile(self._root / 'external-sources.json', {
+        self._sources = JsonFile(self._root / 'external-sources.json', {
             constants.SCHOLAR_PROFILE_URL: '',
         })
         self._tasks = _Tasks(self._root)
