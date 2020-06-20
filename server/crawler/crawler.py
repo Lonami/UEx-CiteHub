@@ -11,7 +11,7 @@ from aiohttp import ClientSession
 
 from .scholar import CrawlScholar
 from .. import constants, utils
-from ..jsonfile import JsonFile
+
 
 MAX_SLEEP = 60
 _log = logging.getLogger(__name__)
@@ -56,9 +56,10 @@ class Crawler:
     def __init__(self, storage_root: Path):
         self._root = storage_root
         self._crawl_task = None
-        self._sources = JsonFile(self._root / 'external-sources.json', {
+        self._sources_file = self._root / 'external-sources.json'
+        self._sources = {
             constants.SCHOLAR_PROFILE_URL: '',
-        })
+        }
         self._tasks = _Tasks(self._root)
         self._client_session = ClientSession()
 
@@ -81,7 +82,7 @@ class Crawler:
             await task.step(self._client_session)
 
     def get_sources(self):
-        return self._sources.as_dict()
+        return self._sources.copy()
 
     def update_sources(self, sources):
         for key, value in sources.items():
@@ -108,7 +109,7 @@ class Crawler:
         _log.info('entering crawler')
         await self._client_session.__aenter__()
 
-        self._sources.load()
+        utils.try_load_json(self._sources, self._sources_file)
         self._tasks.load()
 
         # Crawling is a long-running task we can't block on
@@ -117,7 +118,7 @@ class Crawler:
 
     async def __aexit__(self, *args):
         _log.info('exiting crawler')
-        self._sources.save()
+        utils.save_json(self._sources, self._sources_file)
         self._tasks.save()
         self._crawl_task.cancel()
         try:

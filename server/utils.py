@@ -2,6 +2,8 @@ import asyncio
 import functools
 import heapq
 import itertools
+import json
+from pathlib import Path
 
 
 def pairwise(iterable):
@@ -31,6 +33,24 @@ def locked(func):
             return await func(*args, **kwargs)
 
     return wrapped
+
+
+def try_load_json(data, path: Path):
+    try:
+        with path.open(encoding='utf-8') as fd:
+            data.update(json.load(fd))
+    except FileNotFoundError:
+        pass
+
+
+def save_json(data, path: Path):
+    try:
+        with path.open('w', encoding='utf-8') as fd:
+            return json.dump(data, fd)
+    except FileNotFoundError:  # ask for forgiveness, not permission
+        path.parent.mkdir()
+        with path.open('w', encoding='utf-8') as fd:
+            return json.dump(data, fd)
 
 
 class Heap:
