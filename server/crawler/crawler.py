@@ -12,6 +12,7 @@ from .. import constants, utils
 from ..jsonfile import JsonFile
 
 MAX_SLEEP = 60
+_log = logging.getLogger(__name__)
 
 # TODO because every citation is a publication on its own, we probably want a way to determine
 #      which of those are our own.
@@ -34,11 +35,15 @@ class _Tasks:
         ))
 
     def load(self):
+        _log.info('loading tasks')
         for task in self.tasks():
+            _log.debug('loading task %s', task.__class__.__name__)
             task.load()
 
     def save(self):
+        _log.info('saving tasks')
         for task in self.tasks():
+            _log.debug('saving task %s', task.__class__.__name__)
             task.save()
 
     def next_task(self):
@@ -69,6 +74,7 @@ class Crawler:
             await asyncio.sleep(delay)
             # It's fine for task to have changed while we slept, if it did it's a fresh start
             # that we would want to run soon anyway.
+            _log.debug('stepping task %s', task.__class__.__name__)
             await task.step()
 
     def get_sources(self):
@@ -80,9 +86,11 @@ class Crawler:
 
             value = value.strip()
             if value == self._sources[key]:
+                _log.debug('source %s has not changed', key)
                 continue  # nothing to do
 
             # Invalidate task for this key and recreate it under a new storage
+            _log.info('updating source %s to %s', key, value)
             self._sources[key] = value
 
             # It is possible that we update the sources and not tasks, but very unlikely
@@ -94,6 +102,7 @@ class Crawler:
         # Sources and tasks will be in sync as we update them, which means there is no need to
         # synchronize the tasks based on the sources we loaded but we still need both to let the
         # user know what sources they have configured.
+        _log.info('entering crawler')
         self._sources.load()
         self._tasks.load()
 
@@ -102,6 +111,7 @@ class Crawler:
         return self
 
     async def __aexit__(self, *args):
+        _log.info('exiting crawler')
         self._sources.save()
         self._tasks.save()
         self._crawl_task.cancel()
