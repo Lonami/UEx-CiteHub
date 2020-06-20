@@ -48,7 +48,7 @@ def save_json(data, path: Path):
         with path.open('w', encoding='utf-8') as fd:
             return json.dump(data, fd)
     except FileNotFoundError:  # ask for forgiveness, not permission
-        path.parent.mkdir()
+        path.parent.mkdir(parents=True)
         with path.open('w', encoding='utf-8') as fd:
             return json.dump(data, fd)
 

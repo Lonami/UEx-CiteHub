@@ -1,5 +1,6 @@
 import asyncio
 import codecs
+import logging
 import random
 import re
 import urllib.parse
@@ -8,8 +9,8 @@ from typing import AsyncGenerator
 import aiohttp
 import bs4
 
+from ..storage import Author, Publication
 from .task import Task
-from ..datamodel import Source, Author, Publication
 
 _HOST = 'https://scholar.google.com'
 _HEADERS = {
@@ -31,6 +32,7 @@ _URL_PUBLICATION = '/citations?view_op=view_citation&hl=en&citation_for_view={}'
 _USER_RE = re.compile(r'user=([^&]+)')
 _CITATION_RE = re.compile(r'citation_for_view=([\w-]*:[\w-]*)')
 
+_log = logging.getLogger(__name__)
 
 async def _get_page(session: aiohttp.ClientSession, path: str = '', url: str = None) -> bs4.BeautifulSoup:
     if not url:
@@ -111,11 +113,9 @@ def _analyze_basic_publication_soup(soup) -> dict:
     }
 
 
-def parse_author_profile(soup):
+def parse_author_profile(soup) -> Author:
     # TODO maybe remove most parsing if we don't care about the data.
     #      it's in the git history if we ever need it anyway.
-    #
-    # TODO this should probably return a proper Profile
     name = soup.find('div', id='gsc_prf_in').text
     url_picture = soup.find('img', id='gsc_prf_pup-img').src
 
@@ -157,22 +157,24 @@ def parse_author_profile(soup):
 
     publications, offset = parse_author_profile_publications(soup)
 
-    data = {
-        'name': name,
-        'url_picture': url_picture,
-        'affiliation': affiliation,
-        'email': email,
-        'interests': interests,
-        'cited-by': cited_by,
-        'cited_by5y': cited_by5y,
-        'hindex': hindex,
-        'hindex5y': hindex5y,
-        'i10index': i10index,
-        'i10index5y': i10index5y,
-        'cites-per-year': cites_per_year,
-        'coauthors': coauthors,
-        'publications': publications,
-    }
+    data = Author(
+        full_name=name,
+        extra={
+            'url_picture': url_picture,
+            'affiliation': affiliation,
+            'email': email,
+            'interests': interests,
+            'cited-by': cited_by,
+            'cited_by5y': cited_by5y,
+            'hindex': hindex,
+            'hindex5y': hindex5y,
+            'i10index': i10index,
+            'i10index5y': i10index5y,
+            'cites-per-year': cites_per_year,
+            'coauthors': coauthors,
+            'publications': publications,
+        }
+    )
     return data, offset
 
 
@@ -254,30 +256,6 @@ def parse_citations(soup):
     return citations, next_url
 
 
-# TODO remove these?
-def adapt_author(author: dict) -> Author:
-    name_parts = author['name'].split(maxsplit=1)
-
-    return Author(
-        iden=author['id'],
-        source=Source.GOOGLE_SCHOLAR,
-        first_name=name_parts[0],
-        last_name=name_parts[1] if len(name_parts) > 1 else '',
-        aliases=[],
-    )
-
-
-def adapt_publication(pub: dict, author: Author) -> Publication:
-    return Publication(
-        iden=pub['id'],
-        author=author,
-        source=Source.GOOGLE_SCHOLAR,
-        title=author['name'],
-        year=pub['year'],
-        cited_by=None  # TODO
-    )
-
-
 def author_id_from_url(url):
     url = urllib.parse.urlparse(url)
     assert url.netloc == 'scholar.google.com'
@@ -295,39 +273,43 @@ FULL_DELAY = 24 * 60 * 60
 class CrawlScholar(Task):
     def __init__(self, root):
         super().__init__(root)
-        self._author_id = None  # str
         self._stage = 0  # int
         self._offset = None  # int
         self._cit_offset = None  # url
+        self._pub_count = None
 
     def set_url(self, url):
         # TODO url changes should adjust the task storage
-        self._author_id = author_id_from_url(url)
+        self._storage.user_author_id = author_id_from_url(url)
+        self._due = 0
         self._stage = 0
         self._offset = None
         self._cit_offset = None
+        self._pub_count = None
 
     def _load(self, data):
-        self._author_id = data['author_id']
         self._stage = data['stage']
         self._offset = data['offset']
         self._cit_offset = data['cit-offset']
+        self._pub_count = data['pub-count']
 
     def _save(self):
         return {
-            'author_id': self._author_id,
             'stage': self._stage,
             'offset': self._offset,
             'cit-offset': self._cit_offset,
+            'pub-count': self._pub_count,
         }
 
     async def _step(self, session):
-        if not self._author_id:
+        author_id = self._storage.user_author_id
+        if not author_id:
             return FULL_DELAY
 
         # Initial load
         if self._stage == 0:
-            soup = await _get_page(session, _URL_AUTHOR.format(self._author_id))
+            _log.debug('running stage 0')
+            soup = await _get_page(session, _URL_AUTHOR.format(author_id))
             data, pubs_remain = parse_author_profile(soup)
             if pubs_remain:
                 self._stage = 1
@@ -335,15 +317,15 @@ class CrawlScholar(Task):
                 return PROFILE_DELAY
             else:
                 self._offset = -1
-                return self._next_pub_offset(profile)
+                return self._next_pub_offset()
 
             # TODO once we use a Profile we could have a .update() method to avoid pitfalls
-            profile.full_name = data['name']
-            profile.publications = data['publications']
+            self._pub_count = data['publications']
 
         # Main page but with more results (offset advances by page size)
         elif self._stage == 1:
-            soup = await _get_page(session, _URL_AUTHOR.format(self._author_id) + f'&cstart={self._offset}')
+            _log.debug('running stage 1 at offset %d', self._offset)
+            soup = await _get_page(session, _URL_AUTHOR.format(author_id) + f'&cstart={self._offset}')
             data, pubs_remain = parse_author_profile_publications(soup)
             if pubs_remain:
                 # stay in stage 1
@@ -351,12 +333,13 @@ class CrawlScholar(Task):
                 return PROFILE_DELAY
             else:
                 self._offset = -1
-                return self._next_pub_offset(profile)  # stage 2 or 4
+                return self._next_pub_offset()  # stage 2 or 4
 
             profile.publications.extend(data)
 
         # Publications, one by one (offset is an index into the publications)
         elif self._stage == 2:
+            _log.debug('running stage 2 at offset %d', self._offset)
             soup = await _get_page(session, _URL_PUBLICATION.format(profile.publications[self._offset].id))
             data, cit_url = parse_publication(soup)
 
@@ -365,10 +348,11 @@ class CrawlScholar(Task):
                 self._cit_offset = cit_url
                 return CITATION_DELAY
             else:
-                return self._next_pub_offset(profile)  # stage 2 or 4
+                return self._next_pub_offset()  # stage 2 or 4
 
         # Parsing citation pages
         elif self._stage == 3:
+            _log.debug('running stage 3 at offset %s', self._cit_offset)
             soup = await _get_page(session, url=self._cit_offset)
             data, cit_url = parse_citations(soup)
 
@@ -377,11 +361,11 @@ class CrawlScholar(Task):
                 self._cit_offset = cit_url
                 return CITATION_DELAY
             else:
-                return self._next_pub_offset(profile)  # stage 2 or 4
+                return self._next_pub_offset()  # stage 2 or 4
 
-    def _next_pub_offset(self, profile):
+    def _next_pub_offset(self):
         self._offset += 1
-        if self._offset >= len(profile.publications):
+        if self._offset >= self._pub_count:
             self._stage = 0
             return FULL_DELAY
         else:
