@@ -4,6 +4,8 @@ import json
 import random
 import time
 
+from ..storage import Storage
+
 
 DELAY_JITTER_PERCENT = 0.05
 
@@ -14,7 +16,7 @@ class Task(abc.ABC):
     def __init__(self, root):
         self._root = root
         self._task_file = root / 'task.json'
-        self._profile_file = root / 'profile.json'
+        self._storage = Storage(root)  # TODO maybe storage should have the task too?
         self._due = 0
 
     @abc.abstractmethod
@@ -26,11 +28,13 @@ class Task(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    async def _step(self, session, profile):
+    async def _step(self, session):
         # Should return the delay needed before calling it again
         raise NotImplementedError
 
     def load(self):
+        self._storage.load()
+
         try:
             with self._task_file.open(encoding='utf-8') as fd:
                 data = json.load(fd)
@@ -42,6 +46,8 @@ class Task(abc.ABC):
         self._load(data)
 
     def save(self):
+        self._storage.save()
+
         data = self._save()
         delta = self._due - asyncio.get_event_loop().time()
         data['due'] = time.time() + delta
@@ -52,8 +58,8 @@ class Task(abc.ABC):
         with self._task_file.open('w', encoding='utf-8') as fd:
             json.dump(data, fd)
 
-    async def step(self, session, profile):
-        delay = await self._step(session, profile)
+    async def step(self, session):
+        delay = await self._step(session)
         if not isinstance(delay, (int, float)):
             raise RuntimeError(f'step returned invalid data: {delay}')
 

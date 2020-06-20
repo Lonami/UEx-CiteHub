@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 import aiohttp
-from aiohttp import ClientSession, web
+from aiohttp import web
 
 from . import helpers, rest
 from .crawler import Crawler
@@ -36,7 +36,7 @@ class Server:
         site = aiohttp.web_runner.TCPSite(runner)
 
         try:
-            async with self._app['client'], self._app['crawler']:
+            async with self._app['crawler']:
                 await site.start()
                 print('Running on:', site.name)
                 while True:
@@ -98,7 +98,6 @@ def create_app():
     logging.info('creating aiohttp server...')
     app = web.Application()
     app['config'] = config
-    app['client'] = ClientSession()
     app['crawler'] = Crawler(Path(config['storage']['root']))
 
     # Define routes

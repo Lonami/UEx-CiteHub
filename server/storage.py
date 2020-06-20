@@ -28,7 +28,7 @@ class Storage:
     # TODO maybe the url should be stored here and used as path?
     def __init__(self, root: Path):
         self._root = root
-        self._meta = JsonFile(root / 'meta.json', {
+        self._meta = JsonFile(root / 'profile.json', {
             'user-author-id': None,
             'user-publications': [],
         })

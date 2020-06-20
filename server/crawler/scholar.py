@@ -321,7 +321,7 @@ class CrawlScholar(Task):
             'cit-offset': self._cit_offset,
         }
 
-    async def _step(self, session, profile):
+    async def _step(self, session):
         if not self._author_id:
             return FULL_DELAY
 

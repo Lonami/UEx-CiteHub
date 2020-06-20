@@ -7,6 +7,8 @@ import random
 import time
 from pathlib import Path
 
+from aiohttp import ClientSession
+
 from .scholar import CrawlScholar
 from .. import constants, utils
 from ..jsonfile import JsonFile
@@ -58,6 +60,7 @@ class Crawler:
             constants.SCHOLAR_PROFILE_URL: '',
         })
         self._tasks = _Tasks(self._root)
+        self._client_session = ClientSession()
 
     async def _crawl(self):
         while True:
@@ -75,7 +78,7 @@ class Crawler:
             # It's fine for task to have changed while we slept, if it did it's a fresh start
             # that we would want to run soon anyway.
             _log.debug('stepping task %s', task.__class__.__name__)
-            await task.step()
+            await task.step(self._client_session)
 
     def get_sources(self):
         return self._sources.as_dict()
@@ -103,6 +106,8 @@ class Crawler:
         # synchronize the tasks based on the sources we loaded but we still need both to let the
         # user know what sources they have configured.
         _log.info('entering crawler')
+        await self._client_session.__aenter__()
+
         self._sources.load()
         self._tasks.load()
 
@@ -123,3 +128,4 @@ class Crawler:
             logging.exception('unhandled exception in crawl task')
         finally:
             self._crawl_task = None
+            await self._client_session.__aexit__(*args)
