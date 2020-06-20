@@ -38,25 +38,13 @@ async def _get_page(session: aiohttp.ClientSession, path: str = '', url: str = N
     if not url:
         url = _HOST + path
 
-    try:
-        with open('cache/' + url.replace('/', '_')) as fd:
-            return bs4.BeautifulSoup(fd.read(), 'html.parser')
-    except OSError:
-        pass
+    async with session.get(url, headers=_HEADERS) as resp:
+        resp.raise_for_status()
+        html = (await resp.text()).replace('\xa0', ' ')
+        if 'id="gs_captcha_f"' in html:
+            raise RuntimeError('hit captcha while crawling google scholar')
 
-    # sucks but hopefully avoids captcha
-    await asyncio.sleep(5 + random.uniform(0, 5))
-    while True:
-        async with session.get(url, headers=_HEADERS) as resp:
-            resp.raise_for_status()
-            html = (await resp.text()).replace('\xa0', ' ')
-            if 'id="gs_captcha_f"' in html:
-                input('After solving the captcha above press enter to continue')
-
-            else:
-                with open('cache/' + url.replace('/', '_'), 'w') as fd:
-                    fd.write(html)
-                return bs4.BeautifulSoup(html, 'html.parser')
+        return bs4.BeautifulSoup(html, 'html.parser')
 
 
 def _analyze_basic_author_soup(soup) -> dict:
