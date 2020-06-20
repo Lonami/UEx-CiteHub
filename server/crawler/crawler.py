@@ -65,18 +65,23 @@ class Crawler:
         self._client_session = ClientSession()
 
     async def _crawl(self):
-        while True:
-            task = self._tasks.next_task()
-            delay = task.remaining_delay()
-            if delay > MAX_SLEEP:
-                await self._wait_notify(MAX_SLEEP)
-                continue
+        try:
+            while True:
+                task = self._tasks.next_task()
+                delay = task.remaining_delay()
+                if delay > MAX_SLEEP:
+                    await self._wait_notify(MAX_SLEEP)
+                    continue
 
-            if await self._wait_notify(delay):
-                continue  # tasks changed so we don't want to step on any
+                if await self._wait_notify(delay):
+                    continue  # tasks changed so we don't want to step on any
 
-            _log.debug('stepping task %s', task.__class__.__name__)
-            await task.step(self._client_session)
+                _log.debug('stepping task %s', task.__class__.__name__)
+                await task.step(self._client_session)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            _log.exception('unhandled exception in crawl task')
 
     async def _wait_notify(self, delay):
         try:
@@ -133,8 +138,6 @@ class Crawler:
             await self._crawl_task
         except asyncio.CancelledError:
             pass
-        except Exception:
-            logging.exception('unhandled exception in crawl task')
         finally:
             self._crawl_task = None
             await self._client_session.__aexit__(exc_type, exc_val, exc_tb)
