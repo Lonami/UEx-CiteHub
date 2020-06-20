@@ -61,25 +61,31 @@ class Crawler:
             constants.SCHOLAR_PROFILE_URL: '',
         }
         self._tasks = _Tasks(self._root)
+        self._crawl_notify = asyncio.Event()
         self._client_session = ClientSession()
 
     async def _crawl(self):
         while True:
-            if not self._tasks:
-                await asyncio.sleep(MAX_SLEEP)
-                continue
-
             task = self._tasks.next_task()
             delay = task.remaining_delay()
             if delay > MAX_SLEEP:
-                await asyncio.sleep(MAX_SLEEP)
+                await self._wait_notify(MAX_SLEEP)
                 continue
 
-            await asyncio.sleep(delay)
-            # It's fine for task to have changed while we slept, if it did it's a fresh start
-            # that we would want to run soon anyway.
+            if await self._wait_notify(delay):
+                continue  # tasks changed so we don't want to step on any
+
             _log.debug('stepping task %s', task.__class__.__name__)
             await task.step(self._client_session)
+
+    async def _wait_notify(self, delay):
+        try:
+            self._crawl_notify.clear()
+            await asyncio.wait_for(self._crawl_notify.wait(), delay)
+            _log.debug('got notification to retry crawling')
+            return True
+        except asyncio.TimeoutError:
+            return False
 
     def get_sources(self):
         return self._sources.copy()
@@ -101,6 +107,8 @@ class Crawler:
             # TODO we do zero error handling but the urls may be wrong here and fail
             if key == constants.SCHOLAR_PROFILE_URL:
                 self._tasks.set_scholar_url(value)
+
+        self._crawl_notify.set()
 
     async def __aenter__(self):
         # Sources and tasks will be in sync as we update them, which means there is no need to
