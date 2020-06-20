@@ -116,7 +116,7 @@ class Crawler:
         self._crawl_task = asyncio.create_task(self._crawl())
         return self
 
-    async def __aexit__(self, *args):
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
         _log.info('exiting crawler')
         utils.save_json(self._sources, self._sources_file)
         self._tasks.save()
@@ -129,4 +129,4 @@ class Crawler:
             logging.exception('unhandled exception in crawl task')
         finally:
             self._crawl_task = None
-            await self._client_session.__aexit__(*args)
+            await self._client_session.__aexit__(exc_type, exc_val, exc_tb)
