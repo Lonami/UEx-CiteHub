@@ -22,24 +22,23 @@ MAX_SLEEP = 60
 class _Tasks:
     # A class to namespace all the various tasks
     def __init__(self, root: Path):
-        self.scholar = CrawlScholar()
+        self._root = root
+        self._scholar = CrawlScholar(root / 'scholar')
 
     def set_scholar_url(self, url):
-        self.scholar.set_url(url)
+        self._scholar.set_url(url)
 
     def tasks(self):
         return ((
-            self.scholar,
+            self._scholar,
         ))
 
     def load(self):
-        for _task in self.tasks():
-            # TODO we probably want to share a common Storage all tasks can reuse
-            pass
+        for task in self.tasks():
+            task.load()
 
     def save(self):
         for task in self.tasks():
-            # TODO this is a no-op
             task.save()
 
     def next_task(self):

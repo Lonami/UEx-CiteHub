@@ -293,8 +293,8 @@ FULL_DELAY = 24 * 60 * 60
 
 
 class CrawlScholar(Task):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, root):
+        super().__init__(root)
         self._author_id = None  # str
         self._stage = 0  # int
         self._offset = None  # int

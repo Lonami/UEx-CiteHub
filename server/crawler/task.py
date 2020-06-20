@@ -1,5 +1,6 @@
 import abc
 import asyncio
+import json
 import random
 import time
 
@@ -9,8 +10,11 @@ DELAY_JITTER_PERCENT = 0.05
 
 class Task(abc.ABC):
     # Every different external source uses its own `Task` for crawling profiles, and the
-    # subclasses know how to update the profile data.
-    def __init__(self):
+    # subclasses know how to update the profile data. Every task also has its own profile.
+    def __init__(self, root):
+        self._root = root
+        self._task_file = root / 'task.json'
+        self._profile_file = root / 'profile.json'
         self._due = 0
 
     @abc.abstractmethod
@@ -26,7 +30,13 @@ class Task(abc.ABC):
         # Should return the delay needed before calling it again
         raise NotImplementedError
 
-    def load(self, data):
+    def load(self):
+        try:
+            with self._task_file.open(encoding='utf-8') as fd:
+                data = json.load(fd)
+        except FileNotFoundError:
+            return
+
         delta = data.pop('due') - time.time()
         self._due = asyncio.get_event_loop().time() + delta
         self._load(data)
@@ -35,7 +45,12 @@ class Task(abc.ABC):
         data = self._save()
         delta = self._due - asyncio.get_event_loop().time()
         data['due'] = time.time() + delta
-        return data
+
+        if not self._task_file.parent.is_dir():
+            self._task_file.parent.mkdir()
+
+        with self._task_file.open('w', encoding='utf-8') as fd:
+            json.dump(data, fd)
 
     async def step(self, session, profile):
         delay = await self._step(session, profile)
