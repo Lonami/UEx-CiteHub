@@ -19,12 +19,14 @@ class Server:
         self._app = app
 
     def run(self):
-        asyncio.get_event_loop().run_until_complete(self._run())
+        try:
+            asyncio.run(self._run())
+        except KeyboardInterrupt:
+            pass
 
     async def _run(self):
         runner = web.AppRunner(
             self._app,
-            handle_signals=True,
             access_log_class=aiohttp.web_log.AccessLogger,
             access_log_format=aiohttp.web_log.AccessLogger.LOG_FORMAT,
             access_log=aiohttp.log.access_logger
@@ -39,6 +41,8 @@ class Server:
                 print('Running on:', site.name)
                 while True:
                     await asyncio.sleep(60 * 60)
+        except KeyboardInterrupt:
+            pass
         finally:
             await runner.cleanup()
 
