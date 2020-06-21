@@ -210,7 +210,7 @@ def parse_author_profile_publications(soup) -> (List[Publication], bool):
 
 
 def parse_publication(soup) -> (Publication, str):
-    iden = soup.find('input', id='gsc_vcd_cid-bdy')['value']
+    iden = soup.find('input', id='gsc_vcd_cid')['value']
     title = soup.find('div', id='gsc_vcd_title').text
     authors = None
     date = None
