@@ -400,7 +400,7 @@ class CrawlScholar(Task):
                 pub.cit_paths = []
 
             for cit in citations:
-                self._storage.save_pub(pub)
+                self._storage.save_pub(cit)
                 pub.cit_paths.append(cit.unique_path_name())
 
             self._storage.save_pub(pub)
