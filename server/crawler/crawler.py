@@ -78,6 +78,7 @@ class Crawler:
 
                 _log.debug('stepping task %s', task.__class__.__name__)
                 await task.step(self._client_session)
+                task.save()
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -113,7 +114,12 @@ class Crawler:
             if key == constants.SCHOLAR_PROFILE_URL:
                 self._tasks.set_scholar_url(value)
 
+        self.save()
         self._crawl_notify.set()
+
+    def save(self):
+        utils.save_json(self._sources, self._sources_file)
+        self._tasks.save()
 
     async def __aenter__(self):
         # Sources and tasks will be in sync as we update them, which means there is no need to
@@ -131,8 +137,7 @@ class Crawler:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         _log.info('exiting crawler')
-        utils.save_json(self._sources, self._sources_file)
-        self._tasks.save()
+        self.save()
         self._crawl_task.cancel()
         try:
             await self._crawl_task
