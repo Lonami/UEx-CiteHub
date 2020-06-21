@@ -12,6 +12,8 @@ import bs4
 from ..storage import Author, Publication
 from .task import Task
 
+_PAGE_CACHE = True  # for debugging purposes
+
 _HOST = 'https://scholar.google.com'
 _HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;*/*",
@@ -34,17 +36,47 @@ _CITATION_RE = re.compile(r'citation_for_view=([\w-]*:[\w-]*)')
 
 _log = logging.getLogger(__name__)
 
-async def _get_page(session: aiohttp.ClientSession, path: str = '', url: str = None) -> bs4.BeautifulSoup:
-    if not url:
-        url = _HOST + path
+if _PAGE_CACHE:
+    # copy-paste of non-cache version
+    async def _get_page(session: aiohttp.ClientSession, path: str = '', url: str = None) -> bs4.BeautifulSoup:
+        import hashlib
+        from pathlib import Path
 
-    async with session.get(url, headers=_HEADERS) as resp:
-        resp.raise_for_status()
-        html = (await resp.text()).replace('\xa0', ' ')
+        if not url:
+            url = _HOST + path
+
+        path = Path('cache/scholar')
+        path.mkdir(parents=True, exist_ok=True)
+        cache = path / hashlib.sha256(url.encode('utf-8')).hexdigest()
+
+        if cache.is_file():
+            with cache.open(encoding='utf-8') as fd:
+                html = fd.read()
+        else:
+            async with session.get(url, headers=_HEADERS) as resp:
+                resp.raise_for_status()
+                html = (await resp.text()).replace('\xa0', ' ')
+
+            with cache.open('w', encoding='utf-8') as fd:
+                fd.write(html)
+
         if 'id="gs_captcha_f"' in html:
             raise RuntimeError('hit captcha while crawling google scholar')
 
         return bs4.BeautifulSoup(html, 'html.parser')
+
+else:
+    async def _get_page(session: aiohttp.ClientSession, path: str = '', url: str = None) -> bs4.BeautifulSoup:
+        if not url:
+            url = _HOST + path
+
+        async with session.get(url, headers=_HEADERS) as resp:
+            resp.raise_for_status()
+            html = (await resp.text()).replace('\xa0', ' ')
+            if 'id="gs_captcha_f"' in html:
+                raise RuntimeError('hit captcha while crawling google scholar')
+
+            return bs4.BeautifulSoup(html, 'html.parser')
 
 
 def _analyze_basic_author_soup(soup) -> dict:
