@@ -9,14 +9,21 @@ from typing import List, Optional
 from . import utils
 
 
+def filename_for(identifier):
+    # `identifier` may consist of invalid path characters such as '/', but the paths still need
+    # to be unique. We can't use `base64` because paths are case insensitive on some systems so
+    # there could be collisions. We just go on the safe side and use the sha256 sum.
+    return hashlib.sha256(identifier.encode('utf-8')).hexdigest()
+
+
 # What data we store is inherently tied to the storage itself so we put it here
 @dataclass
 class Author:
-    id: Optional[str]
-    full_name: Optional[str]
-    first_name: Optional[str]
-    last_name: Optional[str]
-    extra: Optional[dict]
+    id: Optional[str] = None
+    full_name: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    extra: Optional[dict] = None
 
     def name(self):
         if self.full_name:
@@ -28,28 +35,28 @@ class Author:
         if full:
             return full
 
-        # Python's `id()` is not guaranteed to be unique forever but we want a consistent name
-        gen_name = getattr(self, '_gen_name', None)
-        if not gen_name:
-            gen_name = f'(unnamed {uuid.uuid4().hex})'
-            self._gen_name = gen_name
-        return gen_name
+        raise ValueError('unidentifiable author')
+
+    def unique_path_name(self) -> str:
+        if self.id:
+            return f'author/{filename_for(self.id)}'
+        else:
+            return f'author/uniden/{filename_for(self.name())}'
 
 
 @dataclass
 class Publication:
-    id: Optional[str]
-    authors_ids: Optional[List[str]]
-    citations: Optional[List['Publication']]
-    extra: Optional[dict]
+    id: Optional[str] = None
+    name: Optional[str] = None
+    authors: Optional[List[Author]] = None  # TODO probably better with paths?
+    cit_paths: Optional[List[str]] = None  # unique_path_name of publications citing this source
+    extra: Optional[dict] = None
 
-
-def filename_for(identifier):
-    # `identifier` may consist of invalid path characters such as '/', but the paths still need
-    # to be unique. We can't use `base64` because paths are case insensitive on some systems so
-    # there could be collisions. We just go on the safe side and use the sha256 sum.
-    return hashlib.sha256(identifier.encode('utf-8')).hexdigest()
-
+    def unique_path_name(self) -> str:
+        if self.id:
+            return f'pub/{filename_for(self.id)}'
+        else:
+            return f'pub/uniden/{filename_for(self.name)}'
 
 class Storage:
     # Class responsible for storing all information from various sources
@@ -64,6 +71,7 @@ class Storage:
 
     @property
     def user_author_id(self):
+        """Author identifier of the current user."""
         return self._profile['user-author-id']
 
     @user_author_id.setter
@@ -72,6 +80,7 @@ class Storage:
 
     @property
     def user_pub_ids(self):
+        """Publication identifiers owned by the current user."""
         return self._profile['user-pub-ids']
 
     @user_pub_ids.setter
@@ -79,16 +88,19 @@ class Storage:
         self._profile['user-pub-ids'] = value
 
     def save_author(self, author: Author):
-        if author.id:
-            path = self._root / filename_for(author.id)
-        else:
-            path = self._root / 'uniden' / filename_for(author.name())
-
+        path = self._root / author.unique_path_name()
         utils.save_json(asdict(author), path)
 
     def save_pub(self, pub: Publication):
-        path = self._root / filename_for(pub.id)
+        # TODO currently we overwrite but maybe we could have smarter merging?
+        path = self._root / pub.unique_path_name()
         utils.save_json(asdict(pub), path)
+
+    def load_pub(self, iden) -> Publication:
+        data = {}
+        path = self._root / Publication(id=iden).unique_path_name()
+        utils.try_load_json(data, path)
+        return Publication(**data)
 
     def load(self):
         utils.try_load_json(self._profile, self._profile_file)
