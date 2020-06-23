@@ -17,11 +17,6 @@ from .. import constants, utils
 MAX_SLEEP = 60
 _log = logging.getLogger(__name__)
 
-# TODO because every citation is a publication on its own, we probably want a way to determine
-#      which of those are our own.
-#
-# TODO be careful when updating our own publications, it might've been saved previously as a
-#      citation (marked as not ours)
 
 class _Tasks:
     # A class to namespace all the various tasks
