@@ -12,29 +12,6 @@ def ensure_storage_root_exists():
     STORAGE_ROOT.mkdir(exist_ok=True, parents=True)
 
 
-async def fetch_ms_academics(session, key, name_query):
-    from .msacademics import Academics
-
-    cached = STORAGE_ROOT / f'msacademics {name_query}'
-    if cached.is_file():
-        LOGGER.info('[msacademics] Loading cached publications %s', name_query)
-        with cached.open(encoding='utf-8') as fd:
-            return json.load(fd)
-
-    academics = Academics(session, key)
-
-    PAPER_ATTRIBUTES = 'AA.AfId,AA.AfN,AA.AuId,AA.AuN,AA.DAuN,AA.DAfN,AA.S,BT,BV,C.CId,C.CN,CC,CitCon,D,DN,DOI,E,ECC,F.DFN,F.FId,F.FN,FP,I,IA,Id,J.JId,J.JN,LP,PB,Pt,RId,S,Ti,V,VFN,VSN,W,Y'
-    publications = await academics.evaluate(
-        expr=f"Composite(AA.AuN='{name_query}')",
-        attributes=PAPER_ATTRIBUTES,
-        count=1000
-    )
-    LOGGER.info('[msacademics] Saving publications to cache %s', name_query)
-    with cached.open('w', encoding='utf-8') as fd:
-        json.dump(publications, fd)
-    return publications
-
-
 async def fetch_scopus(session, key, first_name, last_name):
     from .scopus import Scopus
 

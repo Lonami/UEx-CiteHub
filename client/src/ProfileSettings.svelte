@@ -3,10 +3,13 @@ import { onMount } from 'svelte';
 import { get_sources, save_sources } from './rest.js';
 
 let scholar_input;
+let academics_input;
+
 let submit_button;
 
 $: form_inputs = [
-    scholar_input
+    scholar_input,
+    academics_input,
 ];
 
 let last_error = null;
@@ -57,9 +60,17 @@ onMount(init);
 <form on:submit|preventDefault={save_details}>
     <div>
         <label for="gs-profile-url">Google Scholar profile URL:</label>
-        <input bind:this={scholar_input} id="gs-profile-url" name="gs-profile-url" type="url" disabled>
+        <input bind:this={scholar_input} id="gs-profile-url" name="gs-profile-url" type="url" placeholder="https://scholar.google.com/citations?user=XK_M4ZsAAAAJ" disabled>
         <p>
             Help: navigate to <a href="https://scholar.google.com/citations?view_op=search_authors">Google Scholar's profiles search</a>
+            and search for your profile. Click on it when you find it and copy the URL.
+        </p>
+    </div>
+    <div>
+        <label for="msacademics-profile-url">Microsoft Academics name and institution:</label>
+        <input bind:this={academics_input} id="msacademics-profile-url" name="msacademics-profile-url" type="text" placeholder="https://academic.microsoft.com/profile/09f41163-0628-4f55-bf51-221cd6704a4f/FullName" disabled>
+        <p>
+            Help: navigate to <a href="https://academic.microsoft.com/home">Microsoft Academic's home</a>
             and search for your profile. Click on it when you find it and copy the URL.
         </p>
     </div>

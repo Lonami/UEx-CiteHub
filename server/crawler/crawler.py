@@ -10,6 +10,7 @@ from pathlib import Path
 from aiohttp import ClientSession
 
 from .scholar import CrawlScholar
+from .msacademics import CrawlAcademics
 from .. import constants, utils
 
 
@@ -27,13 +28,18 @@ class _Tasks:
     def __init__(self, root: Path):
         self._root = root
         self._scholar = CrawlScholar(root / 'scholar')
+        self._academics = CrawlAcademics(root / 'academics')
 
     def set_scholar_url(self, url):
         self._scholar.set_url(url)
 
+    def set_academics_url(self, url):
+        self._academics.set_url(url)
+
     def tasks(self):
         return ((
             self._scholar,
+            self._academics,
         ))
 
     def load(self):
@@ -59,6 +65,7 @@ class Crawler:
         self._sources_file = self._root / 'external-sources.json'
         self._sources = {
             constants.SCHOLAR_PROFILE_URL: '',
+            constants.ACADEMICS_PROFILE_URL: '',
         }
         self._tasks = _Tasks(self._root)
         self._crawl_notify = asyncio.Event()
@@ -113,6 +120,9 @@ class Crawler:
             # TODO we do zero error handling but the urls may be wrong here and fail
             if key == constants.SCHOLAR_PROFILE_URL:
                 self._tasks.set_scholar_url(value)
+
+            elif key == constants.ACADEMICS_PROFILE_URL:
+                self._tasks.set_academics_url(value)
 
         self.save()
         self._crawl_notify.set()
