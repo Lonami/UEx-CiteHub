@@ -63,7 +63,6 @@ class Publication:
 
 class Storage:
     # Class responsible for storing all information from various sources
-    # TODO maybe the url should be stored here and used as path?
     def __init__(self, root: Path):
         self._root = root
         self._profile_file = root / 'profile.json'
