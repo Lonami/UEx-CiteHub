@@ -2,4 +2,5 @@ data/
 *.ini
 memory/
 storage/
+cache/
 !example-server-config.ini
