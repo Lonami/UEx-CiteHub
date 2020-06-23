@@ -307,9 +307,23 @@ class CrawlScholar(Task):
         self._offset = None  # int
         self._cit_offset = None  # url
 
-    def set_url(self, url):
+    @classmethod
+    def namespace(cls):
+        return 'scholar'
+
+    @classmethod
+    def fields(cls):
+        return {
+            'url':
+                'Navigate to <a href="https://scholar.google.com/citations'
+                '?view_op=search_authors">Google Scholar\'s profiles search</a> and search for '
+                'your profile. Click on it when you find it and copy the URL.'
+        }
+
+    def set_field(self, key, value):
+        assert key == 'url'
         # TODO url changes should adjust the task storage
-        self._storage.user_author_id = author_id_from_url(url)
+        self._storage.user_author_id = author_id_from_url(value)
         self._storage.user_pub_ids = []
         self._due = 0
         self._stage = 0

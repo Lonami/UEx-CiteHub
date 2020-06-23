@@ -12,7 +12,7 @@ from aiohttp import ClientSession
 from .aminer import CrawlArnetMiner
 from .scholar import CrawlScholar
 from .msacademics import CrawlAcademics
-from .. import constants, utils
+from .. import utils
 
 
 MAX_SLEEP = 60
@@ -23,36 +23,28 @@ class _Tasks:
     # A class to namespace all the various tasks
     def __init__(self, root: Path):
         self._root = root
-        self._scholar = CrawlScholar(root / 'scholar')
-        self._academics = CrawlAcademics(root / 'academics')
-        self._aminer = CrawlArnetMiner(root / 'aminer')
-
-    def set_scholar_url(self, url):
-        self._scholar.set_url(url)
-
-    def set_academics_url(self, url):
-        self._academics.set_url(url)
-
-    def set_aminer_url(self, url):
-        self._aminer.set_url(url)
+        self._tasks = {cls.namespace(): cls(root) for cls in (
+            CrawlScholar,
+            CrawlAcademics,
+            CrawlArnetMiner,
+        )}
 
     def tasks(self):
-        return ((
-            self._scholar,
-            self._academics,
-            self._aminer,
-        ))
+        return self._tasks.values()
+
+    def set_field(self, namespace, key, value):
+        self._tasks[namespace].set_field(key, value)
 
     def load(self):
         _log.info('loading tasks')
         for task in self.tasks():
-            _log.debug('loading task %s', task.__class__.__name__)
+            _log.debug('loading task %s', task.namespace())
             task.load()
 
     def save(self):
         _log.info('saving tasks')
         for task in self.tasks():
-            _log.debug('saving task %s', task.__class__.__name__)
+            _log.debug('saving task %s', task.namespace())
             task.save()
 
     def next_task(self):
@@ -63,13 +55,11 @@ class Crawler:
     def __init__(self, storage_root: Path):
         self._root = storage_root
         self._crawl_task = None
-        self._sources_file = self._root / 'external-sources.json'
-        self._sources = {
-            constants.SCHOLAR_PROFILE_URL: '',
-            constants.ACADEMICS_PROFILE_URL: '',
-            constants.AMINER_PROFILE_URL: '',
-        }
         self._tasks = _Tasks(self._root)
+        # Contains the required fields for the various tasks (persisted only for the frontend)
+        # {namespace: {key, value}}
+        self._sources_file = self._root / 'external-sources.json'
+        self._sources = {task.namespace(): {} for task in self._tasks.tasks()}
         self._crawl_notify = asyncio.Event()
         self._client_session = ClientSession()
 
@@ -85,7 +75,7 @@ class Crawler:
                 if await self._wait_notify(delay):
                     continue  # tasks changed so we don't want to step on any
 
-                _log.debug('stepping task %s', task.__class__.__name__)
+                _log.debug('stepping task %s', task.namespace())
                 await task.step(self._client_session)
                 task.save()
         except asyncio.CancelledError:
@@ -102,32 +92,34 @@ class Crawler:
         except asyncio.TimeoutError:
             return False
 
-    def get_sources(self):
-        return self._sources.copy()
+    def get_source_fields(self):
+        fields = []
+        for task in self._tasks.tasks():
+            for key, description in task.fields().items():
+                fields.append({
+                    'key': f'{task.namespace()}.{key}',
+                    'description': description,
+                    'value': self._sources[task.namespace()].get(key),
+                })
 
-    def update_sources(self, sources):
+        return fields
+
+    def update_source_fields(self, sources):
+        print(sources)
         for key, value in sources.items():
-            assert key in self._sources
-
+            namespace, key = key.split('.')
             value = value.strip()
-            if value == self._sources[key]:
+
+            if value == self._sources[namespace].get(key):
                 _log.debug('source %s has not changed', key)
                 continue  # nothing to do
 
-            # Invalidate task for this key and recreate it under a new storage
             _log.info('updating source %s to %s', key, value)
-            self._sources[key] = value
+            self._sources[namespace][key] = value
 
             # It is possible that we update the sources and not tasks, but very unlikely
             # TODO we do zero error handling but the urls may be wrong here and fail
-            if key == constants.SCHOLAR_PROFILE_URL:
-                self._tasks.set_scholar_url(value)
-
-            elif key == constants.ACADEMICS_PROFILE_URL:
-                self._tasks.set_academics_url(value)
-
-            elif key == constants.AMINER_PROFILE_URL:
-                self._tasks.set_aminer_url(value)
+            self._tasks.set_field(namespace, key, value)
 
         self.save()
         self._crawl_notify.set()

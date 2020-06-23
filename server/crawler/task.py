@@ -3,6 +3,7 @@ import asyncio
 import json
 import random
 import time
+from typing import Mapping
 
 from ..storage import Storage
 
@@ -21,10 +22,25 @@ class Task(abc.ABC):
     # Every different external source uses its own `Task` for crawling profiles, and the
     # subclasses know how to update the profile data. Every task also has its own profile.
     def __init__(self, root):
-        self._root = root
-        self._task_file = root / 'task.json'
-        self._storage = Storage(root)  # TODO maybe storage should have the task too?
+        self._root = root / self.namespace()
+        self._task_file = self._root / 'task.json'
+        self._storage = Storage(self._root)  # TODO maybe storage should have the task too?
         self._due = 0
+
+    @classmethod
+    @abc.abstractmethod
+    def namespace(cls) -> str:
+        raise NotImplementedError
+
+    @classmethod
+    @abc.abstractmethod
+    def fields(cls) -> Mapping[str, str]:
+        # Should return `{field key: field description}`` on required user-provided fields.
+        # The description may contain HTML tags.
+        raise NotImplementedError
+
+    def set_field(self, key, value):
+        raise NotImplementedError
 
     @abc.abstractmethod
     def _load(self, data):

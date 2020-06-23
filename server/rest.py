@@ -111,12 +111,12 @@ async def get_publications(request):
 
 
 def get_sources(request):
-    return web.json_response(request.app['crawler'].get_sources())
+    return web.json_response(request.app['crawler'].get_source_fields())
 
 
 @utils.locked
 async def save_sources(request):
-    request.app['crawler'].update_sources(await request.json())
+    request.app['crawler'].update_source_fields(await request.json())
     return web.json_response({})
 
 

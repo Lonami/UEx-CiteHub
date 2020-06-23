@@ -200,8 +200,21 @@ class CrawlArnetMiner(Task):
         self._cit_offset = None
         self._cit_count = None
 
-    def set_url(self, url):
-        self._storage.user_author_id = author_id_from_url(url)
+    @classmethod
+    def namespace(cls):
+        return 'aminer'
+
+    @classmethod
+    def fields(cls):
+        return {
+            'url':
+                'Navigate to <a href="https://www.aminer.cn/">AMiner\'s home</a> and search for '
+                'your profile. Click on it when you find it and copy the URL.'
+        }
+
+    def set_field(self, key, value):
+        assert key == 'url'
+        self._storage.user_author_id = author_id_from_url(value)
         self._storage.user_pub_ids = []
         self._due = 0
         self._stage = 0
