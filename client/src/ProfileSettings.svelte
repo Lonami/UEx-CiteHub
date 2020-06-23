@@ -4,12 +4,14 @@ import { get_sources, save_sources } from './rest.js';
 
 let scholar_input;
 let academics_input;
+let aminer_input;
 
 let submit_button;
 
 $: form_inputs = [
     scholar_input,
     academics_input,
+    aminer_input,
 ];
 
 let last_error = null;
@@ -67,10 +69,18 @@ onMount(init);
         </p>
     </div>
     <div>
-        <label for="msacademics-profile-url">Microsoft Academics name and institution:</label>
+        <label for="msacademics-profile-url">Microsoft Academics profile URL:</label>
         <input bind:this={academics_input} id="msacademics-profile-url" name="msacademics-profile-url" type="text" placeholder="https://academic.microsoft.com/profile/09f41163-0628-4f55-bf51-221cd6704a4f/FullName" disabled>
         <p>
             Help: navigate to <a href="https://academic.microsoft.com/home">Microsoft Academic's home</a>
+            and search for your profile. Click on it when you find it and copy the URL.
+        </p>
+    </div>
+    <div>
+        <label for="aminer-profile-url">AMiner profile URL:</label>
+        <input bind:this={aminer_input} id="aminer-profile-url" name="aminer-profile-url" type="text" placeholder="https://www.aminer.cn/profile/full-name/6f725f7d6744d62534f88db0" disabled>
+        <p>
+            Help: navigate to <a href="https://www.aminer.cn/">AMiner's home</a>
             and search for your profile. Click on it when you find it and copy the URL.
         </p>
     </div>

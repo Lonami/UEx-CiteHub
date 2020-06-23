@@ -17,6 +17,7 @@ def filename_for(identifier):
 
 
 # What data we store is inherently tied to the storage itself so we put it here
+# TODO perhaps one "name" should never be optional (same for publications' title)
 @dataclass
 class Author:
     id: Optional[str] = None
@@ -48,7 +49,9 @@ class Author:
 class Publication:
     id: Optional[str] = None
     name: Optional[str] = None
-    authors: Optional[List[Author]] = None  # TODO probably better with paths?
+    # TODO review how we're saving authors
+    # TODO probably better saving paths (as references) here?
+    authors: Optional[List[Author]] = None
     cit_paths: Optional[List[str]] = None  # unique_path_name of publications citing this source
     extra: Optional[dict] = None
 

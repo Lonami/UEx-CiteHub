@@ -36,22 +36,3 @@ async def fetch_scopus(session, key, first_name, last_name):
 
     # TODO consider using ORCID, Researched ID, Publons or Crossref
     #      if Scopus does not provide information about the publications.
-
-
-async def fetch_aminer(session, auth, name_query):
-    from .aminer import ArnetMiner
-
-    cached = STORAGE_ROOT / f'aminer {name_query}'
-    if cached.is_file():
-        LOGGER.info('[aminer] Loading cached publications %s', name_query)
-        with cached.open(encoding='utf-8') as fd:
-            return json.load(fd)
-
-    aminer = ArnetMiner(session, auth)
-    author = await aminer.search_person(name_query)
-    author_id = author['items'][0]['id']
-    publications = await aminer.search_publications(author_id)
-    LOGGER.info('[aminer] Saving publications to cache %s', name_query)
-    with cached.open('w', encoding='utf-8') as fd:
-        json.dump(publications, fd)
-    return publications

@@ -9,6 +9,7 @@ from pathlib import Path
 
 from aiohttp import ClientSession
 
+from .aminer import CrawlArnetMiner
 from .scholar import CrawlScholar
 from .msacademics import CrawlAcademics
 from .. import constants, utils
@@ -24,6 +25,7 @@ class _Tasks:
         self._root = root
         self._scholar = CrawlScholar(root / 'scholar')
         self._academics = CrawlAcademics(root / 'academics')
+        self._aminer = CrawlArnetMiner(root / 'aminer')
 
     def set_scholar_url(self, url):
         self._scholar.set_url(url)
@@ -31,10 +33,14 @@ class _Tasks:
     def set_academics_url(self, url):
         self._academics.set_url(url)
 
+    def set_aminer_url(self, url):
+        self._aminer.set_url(url)
+
     def tasks(self):
         return ((
             self._scholar,
             self._academics,
+            self._aminer,
         ))
 
     def load(self):
@@ -61,6 +67,7 @@ class Crawler:
         self._sources = {
             constants.SCHOLAR_PROFILE_URL: '',
             constants.ACADEMICS_PROFILE_URL: '',
+            constants.AMINER_PROFILE_URL: '',
         }
         self._tasks = _Tasks(self._root)
         self._crawl_notify = asyncio.Event()
@@ -118,6 +125,9 @@ class Crawler:
 
             elif key == constants.ACADEMICS_PROFILE_URL:
                 self._tasks.set_academics_url(value)
+
+            elif key == constants.AMINER_PROFILE_URL:
+                self._tasks.set_aminer_url(value)
 
         self.save()
         self._crawl_notify.set()
