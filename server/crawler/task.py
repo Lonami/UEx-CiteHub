@@ -10,6 +10,13 @@ from ..storage import Storage
 DELAY_JITTER_PERCENT = 0.05
 
 
+# TODO tasks are a bit messy because each stores its resume state in its own way
+# ideally we'd have a rust-like enum to ensure that only the data we need is saved
+# (and we don't have garbage) which maybe we could return to automate the process
+#
+# similar for set_url which resets due and stage, maybe the tasks should define what
+# they require so it can be better generalized and also have a "start state" which
+# could be defined through decorators or something
 class Task(abc.ABC):
     # Every different external source uses its own `Task` for crawling profiles, and the
     # subclasses know how to update the profile data. Every task also has its own profile.
