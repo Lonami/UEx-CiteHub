@@ -61,7 +61,7 @@ class Task(abc.ABC):
     async def step(self, session):
         delay = await self._step(session)
         if not isinstance(delay, (int, float)):
-            raise RuntimeError(f'step returned invalid data: {delay}')
+            raise TypeError(f'step returned invalid data: {delay}')
 
         jitter_range = delay * DELAY_JITTER_PERCENT
         jitter = random.uniform(-jitter_range, jitter_range)
