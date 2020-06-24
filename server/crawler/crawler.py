@@ -25,13 +25,21 @@ class _Tasks:
     # A class to namespace all the various tasks
     def __init__(self, root: Path):
         self._root = root
-        self._tasks = {cls.namespace(): cls(root) for cls in (
-            CrawlScholar,
-            CrawlAcademics,
-            CrawlArnetMiner,
-            CrawlExplore,
-            CrawlResearchGate,
-        )}
+        self._tasks = {}
+        for cls in (
+                CrawlScholar,
+                CrawlAcademics,
+                CrawlArnetMiner,
+                CrawlExplore,
+                CrawlResearchGate,
+        ):
+            if cls.namespace() in self._tasks:
+                raise ValueError(
+                    f'two different tasks have the same namespace "{cls.namespace()}": '
+                    f'{self._tasks[cls.namespace()].__class__.__name__} and {cls.__name__}'
+                )
+            else:
+                self._tasks[cls.namespace()] = cls(root)
 
     def tasks(self):
         return self._tasks.values()
