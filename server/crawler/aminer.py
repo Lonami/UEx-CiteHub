@@ -161,7 +161,8 @@ def adapt_publications(data) -> Generator[Publication, None, None]:
     def maybe_int(value):
         return int(value) if value else None
 
-    for pub in data['items']:
+    # If it has 0 keyValues then the items key will be missing
+    for pub in data.get('items', ()):
         yield Publication(
             id=pub['id'],
             name=pub['title'],
