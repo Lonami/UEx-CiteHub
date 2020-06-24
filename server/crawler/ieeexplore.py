@@ -103,6 +103,8 @@ def adapt_citations(data) -> Generator[Publication, None, None]:
 
         if parts[-1].endswith('.') and parts[-1][:-1].isdigit():
             year = int(parts.pop()[:-1])
+        else:
+            year = None
 
         if parts[-1].startswith('pp. '):
             pages = parts.pop()[4:]
@@ -111,12 +113,18 @@ def adapt_citations(data) -> Generator[Publication, None, None]:
             else:
                 start_page = int(pages)
                 end_page = start_page
+        else:
+            start_page = end_page = None
 
         if parts[-1].startswith('no. '):
             issue = int(parts.pop()[4:])
+        else:
+            issue = None
 
         if parts[-1].startswith('vol. '):
             volume = int(parts.pop()[5:])
+        else:
+            volume = None
 
         # Anything else we don't handle, so we can move on to handling the enclosed parts
         italics = _remove_enclosed(parts, sep, '<i>', '</i>')
@@ -137,7 +145,7 @@ def adapt_citations(data) -> Generator[Publication, None, None]:
         yield Publication(
             id=iden,
             name=title,
-            authors=[Author(name=name) for name in author_names],
+            authors=[Author(full_name=name) for name in author_names],
             extra={
                 'google-scholar-url': cit.get('googleScholarLink'),
                 'start-page': start_page,
@@ -216,7 +224,7 @@ class CrawlExplore(Task):
             _log.debug('running stage 1 at %d', self._offset)
 
             pub_id = self._storage.user_pub_ids[self._offset]
-            pub = self._storage.load_pub(pub)
+            pub = self._storage.load_pub(pub_id)
 
             if pub.cit_paths is None:
                 pub.cit_paths = []
