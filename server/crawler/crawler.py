@@ -12,6 +12,7 @@ from aiohttp import ClientSession
 from .aminer import CrawlArnetMiner
 from .scholar import CrawlScholar
 from .msacademics import CrawlAcademics
+from .ieeexplore import CrawlExplore
 from .. import utils
 
 
@@ -27,6 +28,7 @@ class _Tasks:
             CrawlScholar,
             CrawlAcademics,
             CrawlArnetMiner,
+            CrawlExplore,
         )}
 
     def tasks(self):

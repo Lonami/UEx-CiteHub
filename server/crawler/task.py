@@ -53,6 +53,7 @@ class Task(abc.ABC):
     @abc.abstractmethod
     async def _step(self, session):
         # Should return the delay needed before calling it again
+        # TODO probably don't call step if there's no author id in storage
         raise NotImplementedError
 
     def load(self):
