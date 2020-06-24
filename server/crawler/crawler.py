@@ -14,6 +14,7 @@ from .scholar import CrawlScholar
 from .msacademics import CrawlAcademics
 from .ieeexplore import CrawlExplore
 from .researchgate import CrawlResearchGate
+from .dimensions import CrawlDimensions
 from .. import utils
 
 
@@ -32,6 +33,7 @@ class _Tasks:
                 CrawlArnetMiner,
                 CrawlExplore,
                 CrawlResearchGate,
+                CrawlDimensions,
         ):
             if cls.namespace() in self._tasks:
                 raise ValueError(
