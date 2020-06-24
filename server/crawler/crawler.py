@@ -13,6 +13,7 @@ from .aminer import CrawlArnetMiner
 from .scholar import CrawlScholar
 from .msacademics import CrawlAcademics
 from .ieeexplore import CrawlExplore
+from .researchgate import CrawlResearchGate
 from .. import utils
 
 
@@ -29,6 +30,7 @@ class _Tasks:
             CrawlAcademics,
             CrawlArnetMiner,
             CrawlExplore,
+            CrawlResearchGate,
         )}
 
     def tasks(self):
