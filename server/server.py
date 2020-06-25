@@ -13,6 +13,12 @@ from aiohttp import web
 from . import helpers, rest
 from .crawler import Crawler
 
+class NoOpAsyncContext:
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        pass
 
 class Server:
     def __init__(self, app):
@@ -25,9 +31,13 @@ class Server:
             pass
 
     async def _run(self):
-        # Have to do this inside a coroutine to keep `aiohttp` happy
-        self._app['crawler'] = Crawler(Path(self._app['config']['storage']['root']))
+        if self._app['config']['storage'].getboolean('crawler'):
+            self._app['crawler'] = Crawler(Path(self._app['config']['storage']['root']))
+        else:
+            logging.info('crawler disabled via config')
+            self._app['crawler'] = NoOpAsyncContext()
 
+        # Have to do this inside a coroutine to keep `aiohttp` happy
         runner = web.AppRunner(
             self._app,
             access_log_class=aiohttp.web_log.AccessLogger,

@@ -119,7 +119,6 @@ class Crawler:
         return fields
 
     def update_source_fields(self, sources):
-        print(sources)
         for key, value in sources.items():
             namespace, key = key.split('.')
             value = value.strip()
