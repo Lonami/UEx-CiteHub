@@ -66,8 +66,9 @@ class _Tasks:
 
 class Crawler:
     # The crawler just runs tasks
-    def __init__(self, storage_root: Path):
+    def __init__(self, storage_root: Path, *, enabled: bool):
         self._root = storage_root
+        self._enabled = enabled
         self._crawl_task = None
         self._tasks = _Tasks(self._root)
         # Contains the required fields for the various tasks (persisted only for the frontend)
@@ -119,6 +120,9 @@ class Crawler:
         return fields
 
     def update_source_fields(self, sources):
+        if not self._enabled:
+            return
+
         for key, value in sources.items():
             namespace, key = key.split('.')
             value = value.strip()
@@ -145,6 +149,9 @@ class Crawler:
         # Sources and tasks will be in sync as we update them, which means there is no need to
         # synchronize the tasks based on the sources we loaded but we still need both to let the
         # user know what sources they have configured.
+        if not self._enabled:
+            return
+
         _log.info('entering crawler')
         await self._client_session.__aenter__()
 
@@ -156,6 +163,9 @@ class Crawler:
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if not self._enabled:
+            return
+
         _log.info('exiting crawler')
         self.save()
         self._crawl_task.cancel()
