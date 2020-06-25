@@ -178,7 +178,7 @@ def adapt_publications(data) -> Generator[Publication, None, None]:
             ],
             extra={
                 'cit-count': pub['num_citation'],  # used later
-                'doi': pub['doi'],
+                'doi': pub.get('doi'),
                 'language': pub.get('lang') or None,
                 'first-page': maybe_int(pub.get('pages', {}).get('start')),
                 'last-page': maybe_int(pub.get('pages', {}).get('end')),
