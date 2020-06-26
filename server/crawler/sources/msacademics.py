@@ -20,6 +20,8 @@ from typing import Generator, List, Tuple
 
 from ...storage import Author, Publication
 from ..task import Task
+from dataclasses import dataclass
+from ..step import Step
 
 _log = logging.getLogger(__name__)
 
@@ -208,20 +210,37 @@ def adapt_citations(data) -> Generator[Tuple[Publication, List[str]], None, None
     for paper in data['rpi']:
         yield _adapt_paper(paper['paper']), [paper['paperId'] for paper in paper['originalPaperLinks']]
 
+class Stage:
+    @dataclass
+    class FetchQueries:
+        INDEX = 0
+
+    @dataclass
+    class FetchPublications:
+        INDEX = 1
+        pub_count: int
+        pub_expr: str
+        cit_expr: str
+        query: str
+        offset: int = 0
+
+    @dataclass
+    class FetchCitations:
+        INDEX = 2
+        cit_expr: str
+        query: str
+        offset: int = 0
+
 class CrawlAcademics(Task):
-    def __init__(self, root):
-        super().__init__(root)
-        self._stage = 0
-        self._offset = None
-        self._pub_count = None
-        self._pub_expr = None
-        self._cit_count = None
-        self._cit_expr = None
-        self._query = None
+    Stage = Stage
 
     @classmethod
     def namespace(cls):
         return 'academics'
+
+    @classmethod
+    def initial_stage(cls):
+        return Stage.FetchQueries()
 
     @classmethod
     def fields(cls):
@@ -237,106 +256,75 @@ class CrawlAcademics(Task):
         self._storage.user_author_id = author_id_from_url(value)
         self._storage.user_pub_ids = []
         self._due = 0
-        self._stage = 0
-        self._offset = None
-        self._pub_count = None
-        self._pub_expr = None
-        self._cit_count = None
-        self._cit_expr = None
-        self._query = None
 
-    def _load(self, data):
-        self._stage = data['stage']
-        self._offset = data['offset']
-        self._pub_count = data['pub-count']
-        self._pub_expr = data['pub-expr']
-        self._cit_count = data['cit-count']
-        self._cit_expr = data['cit-expr']
-        self._query = data['query']
-
-    def _save(self):
-        return {
-            'stage': self._stage,
-            'offset': self._offset,
-            'pub-count': self._pub_count,
-            'pub-expr': self._pub_expr,
-            'cit-count': self._cit_count,
-            'cit-expr': self._cit_expr,
-            'query': self._query,
-        }
-
-    async def _step(self, session):
+    async def _step(self, stage, session) -> Step:
         if not self._storage.user_author_id:
-            return 24 * 60 * 60
+            return Step(delay=24 * 60 * 60, stage=None)
 
-        # Determine the true queries to make
-        if self._stage == 0:
+        if isinstance(stage, Stage.FetchQueries):
             _log.debug('running stage 0 on %s', self._storage.user_author_id)
             data = await fetch_profile(session, self._storage.user_author_id)
-            self._pub_count = data['entity']['pc']
-            self._pub_expr = data['publicationsExpression']
-            self._cit_expr = data['citedByExpression']
-            self._query = data['entity']['dn']
-            self._stage = 1
-            self._offset = 0
-            return 1
+            return Step(
+                delay=1,
+                stage=Stage.FetchPublications(
+                    pub_count=data['entity']['pc'],
+                    pub_expr=data['publicationsExpression'],
+                    cit_expr=data['citedByExpression'],
+                    query=data['entity']['dn'],
+                ),
+            )
 
-        # Fetching publications
-        elif self._stage == 1:
-            _log.debug('running stage 1 on %s (%s), offset %d', self._pub_expr, self._query, self._offset)
-            data = await fetch_publications(session, self._pub_expr, self._query, self._offset)
+        elif isinstance(stage, Stage.FetchPublications):
+            _log.debug('running stage 1 on %s (%s), offset %d', stage.pub_expr, stage.query, stage.offset)
+            data = await fetch_publications(session, stage.pub_expr, stage.query, stage.offset)
 
-            empty = True
-            for pub in adapt_publications(data):
-                empty = False
-                self._offset += 1
-                self._storage.user_pub_ids.append(pub.id)
-                self._storage.save_pub(pub)
-
-            if empty:
-                _log.info('stage 1 came out empty at %d/%d', self._offset, self._pub_count)
-                self._offset = self._pub_count
+            self_publications = list(adapt_publications(data))
+            offset = stage.offset + len(self_publications)
+            if offset >= stage.pub_count or not self_publications:
+                return Step(
+                    delay=30 * 60,
+                    stage=Stage.FetchCitations(
+                        cit_expr=stage.cit_expr,
+                        query=stage.query,
+                    ),
+                    self_publications=self_publications,
+                )
             else:
-                _log.debug('stage 1 at %d/%d', self._offset, self._pub_count)
+                return Step(
+                    delay=2 * 60,
+                    stage=Stage.FetchPublications(
+                        pub_count=stage.pub_count,
+                        pub_expr=stage.pub_expr,
+                        cit_expr=stage.cit_expr,
+                        query=stage.query,
+                        offset=offset,
+                    ),
+                    self_publications=self_publications,
+                )
 
-            if self._offset < self._pub_count:
-                return 2 * 60
-            else:
-                self._stage = 2
-                self._offset = 0
-                return 30 * 60
+        elif isinstance(stage, Stage.FetchCitations):
+            _log.debug('running stage 2 on %s (%s), offset %d', stage.cit_expr, stage.query, stage.offset)
+            data = await fetch_citations(session, stage.cit_expr, stage.query, stage.offset)
+            cit_count = data['sr']['t']
 
-        # Fetching citations
-        elif self._stage == 2:
-            _log.debug('running stage 2 on %s (%s), offset %d', self._pub_expr, self._query, self._offset)
-            data = await fetch_citations(session, self._cit_expr, self._query, self._offset)
-            self._cit_count = data['sr']['t']
-
-            empty = True
+            citations = {}
+            offset = stage.offset
             for cit, cites_ids in adapt_citations(data):
-                empty = False
-                self._offset += 1
-                self._storage.save_pub(cit)
-
+                offset += 1
                 for cites_id in cites_ids:
-                    pub = self._storage.load_pub(cites_id)
-                    if pub.cit_paths is None:
-                        pub.cit_paths = []
+                    citations.setdefault(cites_id, []).append(cit)
 
-                    pub.cit_paths.append(cit.unique_path_name())
-                    self._storage.save_pub(pub)
-
-            if empty:
-                _log.info('stage 2 came out empty at %d/%d', self._offset, self._cit_count)
-                self._offset = self._cit_count
+            if offset >= cit_count or not citations:
+                return Step(
+                    delay=30 * 60,
+                    stage=self.initial_stage(),
+                )
             else:
-                _log.debug('stage 2 at %d/%d', self._offset, self._cit_count)
-
-            if self._offset < self._cit_count:
-                return 2 * 60
-            else:
-                self._stage = 0
-                self._offset = None
-                return 30 * 60
-
-            return 60
+                return Step(
+                    delay=2 * 60,
+                    stage=Stage.FetchCitations(
+                        cit_expr=stage.cit_expr,
+                        query=stage.query,
+                        offset=offset,
+                    )
+                )

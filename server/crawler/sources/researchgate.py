@@ -16,6 +16,8 @@ import bs4
 from typing import Generator
 from ...storage import Author, Publication
 from ..task import Task
+from dataclasses import dataclass
+from ..step import Step
 
 _log = logging.getLogger(__name__)
 
@@ -100,19 +102,33 @@ def author_id_from_url(url):
     assert parts[1] == 'profile'
     return parts[2]
 
+class Stage:
+    @dataclass
+    class FetchPublications:
+        INDEX = 0
+
+    @dataclass
+    class FetchToken:
+        INDEX = 1
+
+    @dataclass
+    class FetchCitations:
+        INDEX = 2
+        rg_token: str
+        sid: str
+        offset: int = 0
+        cit_offset: int = 0
 
 class CrawlResearchGate(Task):
-    def __init__(self, root):
-        super().__init__(root)
-        self._stage = 0
-        self._offset = None
-        self._cit_offset = None
-        self._rg_token = None
-        self._sid = None
+    Stage = Stage
 
     @classmethod
     def namespace(cls):
         return 'researchgate'
+
+    @classmethod
+    def initial_stage(cls):
+        return Stage.FetchPublications()
 
     @classmethod
     def fields(cls):
@@ -128,86 +144,63 @@ class CrawlResearchGate(Task):
         self._storage.user_author_id = author_id_from_url(value)
         self._storage.user_pub_ids = []
         self._due = 0
-        self._stage = 0
-        self._offset = None
-        self._cit_offset = None
-        self._rg_token = None
-        self._sid = None
 
-    def _load(self, data):
-        self._stage = data['stage']
-        self._offset = data['offset']
-        self._cit_offset = data['cit-offset']
-        self._rg_token = data['rg-token']
-        self._sid = data['sid']
-
-    def _save(self):
-        return {
-            'stage': self._stage,
-            'offset': self._offset,
-            'cit-offset': self._cit_offset,
-            'rg-token': self._rg_token,
-            'sid': self._sid,
-        }
-
-    async def _step(self, session):
+    async def _step(self, stage, session) -> Step:
         if not self._storage.user_author_id:
-            return 24 * 60 * 60
+            return Step(delay=24 * 60 * 60, stage=None)
 
-        # Fetch token (hopefully it lasts long enough until we start over)
-        if self._stage == 0:
+        if isinstance(stage, Stage.FetchPublications):
             _log.debug('running stage 0')
-            self._rg_token, self._sid = await fetch_token_sid(session)
-            self._stage = 1
-            return 0
-
-        # Main page with mostly publications
-        elif self._stage == 1:
-            _log.debug('running stage 1')
             soup = await fetch_author(session, self._storage.user_author_id)
-            for pub in adapt_publications(soup):
-                self._storage.user_pub_ids.append(pub.id)
-                self._storage.save_pub(pub)
+            self_publications = list(adapt_publications(soup))
 
-            self._stage = 2
-            self._offset = 0
-            self._cit_offset = 0
-            return 10 * 60
+            return Step(
+                delay=1,
+                stage=Stage.FetchToken(),
+                self_publications=self_publications,
+            )
 
-        # Citations, one by one (offset is an index into the publications)
-        elif self._stage == 2:
-            if self._offset >= len(self._storage.user_pub_ids):
-                self._stage = 0
-                self._offset = None
-                self._cit_offset = None
-                return 24 * 60 * 60
+        elif isinstance(stage, Stage.FetchToken):
+            _log.debug('running stage 1')
+            rg_token, sid = await fetch_token_sid(session)
+            return Step(
+                delay=10 * 60,
+                stage=Stage.FetchCitations(rg_token=rg_token, sid=sid),
+            )
 
-            _log.debug('running stage 2 at offset %d', self._offset)
-            pub_id = self._storage.user_pub_ids[self._offset]
-            pub = self._storage.load_pub(pub_id)
-            if pub.cit_paths is None:
-                pub.cit_paths = []
+        elif isinstance(stage, Stage.FetchCitations):
+            if stage.offset >= len(self._storage.user_pub_ids):
+                return Step(
+                    delay=24 * 60 * 60,
+                    stage=self.initial_stage(),
+                )
+
+            _log.debug('running stage 2 at offset %d', stage.offset)
+            pub_id = self._storage.user_pub_ids[stage.offset]
 
             soup = await fetch_citations(
                 session,
-                self._rg_token,
-                self._sid,
+                stage.rg_token,
+                stage.sid,
                 pub_id,
-                self._cit_offset
+                stage.cit_offset
             )
 
-            empty = True
-            for cit in adapt_citations(soup):
-                empty = False
-                self._cit_offset += 1
-                self._storage.save_pub(cit)
-                pub.cit_paths.append(cit.unique_path_name())
-
-            self._storage.save_pub(pub)
-
-            if empty:
-                self._offset += 1
-                self._cit_offset = 0
-                return 10 * 60
+            citations = list(adapt_citations(soup))
+            if citations:
+                return Step(
+                    delay=10 * 60,
+                    stage=Stage.FetchCitations(
+                        rg_token=rg_token,
+                        sid=sid,
+                        offset=stage.offset,
+                        cit_offset=stage.cit_offset + len(citations)
+                    ),
+                    citations={pub_id: citations},
+                )
             else:
-                return 2 * 60
+                return Step(
+                    delay=2 * 60,
+                    stage=Stage.FetchCitations(rg_token=rg_token, sid=sid, offset=stage.offset + 1),
+                    citations={pub_id: citations},
+                )

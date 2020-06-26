@@ -11,9 +11,11 @@ The network tab in web browsers displays a lot of interesting XHR.
 """
 import urllib.parse
 import logging
+from dataclasses import dataclass
 from typing import Generator, List, Tuple
 
 from ...storage import Author, Publication
+from ..step import Step
 from ..task import Task
 
 _log = logging.getLogger(__name__)
@@ -190,20 +192,30 @@ def adapt_publications(data) -> Generator[Publication, None, None]:
             }
         )
 
+# TODO more standard way to deal with stages and avoid manual stage checks, same for debug logs
+class Stage:
+    @dataclass
+    class FetchPublications:
+        INDEX = 0
+        offset: int = 0
+
+    @dataclass
+    class FetchCitations:
+        INDEX = 1
+        pub_offset: int = 0
+        cit_offset: int = 0
 
 # TODO this is very similar to msacademics, maybe we can reuse
 class CrawlArnetMiner(Task):
-    def __init__(self, root):
-        super().__init__(root)
-        self._stage = 0
-        self._offset = None
-        self._pub_count = None
-        self._cit_offset = None
-        self._cit_count = None
+    Stage = Stage
 
     @classmethod
     def namespace(cls):
         return 'aminer'
+
+    @classmethod
+    def initial_stage(cls):
+        return Stage.FetchPublications()
 
     @classmethod
     def fields(cls):
@@ -218,109 +230,73 @@ class CrawlArnetMiner(Task):
         self._storage.user_author_id = author_id_from_url(value)
         self._storage.user_pub_ids = []
         self._due = 0
-        self._stage = 0
-        self._offset = 0
-        self._pub_count = None
-        self._cit_offset = None
-        self._cit_count = None
 
-    def _load(self, data):
-        self._stage = data['stage']
-        self._offset = data['offset']
-        self._pub_count = data['pub-count']
-        self._cit_offset = data['cit-offset']
-        self._cit_count = data['cit-count']
-
-    def _save(self):
-        return {
-            'stage': self._stage,
-            'offset': self._offset,
-            'pub-count': self._pub_count,
-            'cit-offset': self._cit_offset,
-            'cit-count': self._cit_count,
-        }
-
-    async def _step(self, session):
+    async def _step(self, stage, session) -> Step:
         if not self._storage.user_author_id:
-            return 24 * 60 * 60
+            return Step(delay=24 * 60 * 60, stage=None)
 
         miner = ArnetMiner(session)
 
-        # Fetching publications
-        if self._stage == 0:
-            _log.debug('running stage 0 at offset %d', self._offset)
-            data = await miner.search_publications(self._storage.user_author_id, self._offset)
-            self._pub_count = data['keyValues']['total']
+        if isinstance(stage, Stage.FetchPublications):
+            _log.debug('running stage 0 at offset %d', stage.offset)
+            data = await miner.search_publications(self._storage.user_author_id, stage.offset)
 
-            empty = True
-            for pub in adapt_publications(data):
-                empty = False
-                self._offset += 1
-                self._storage.user_pub_ids.append(pub.id)
-                self._storage.save_pub(pub)
+            pub_count = data['keyValues']['total']
+            self_publications = list(adapt_publications(data))
 
-            if empty:
-                _log.info('stage 0 came out empty at %d/%d', self._offset, self._pub_count)
-                self._offset = self._pub_count
+            offset = stage.offset + len(self_publications)
+            if offset >= pub_count or not self_publications:
+                delay = 30 * 60
+                stage = Stage.FetchCitations()
             else:
-                _log.debug('stage 0 at %d/%d', self._offset, self._pub_count)
+                delay = 5 * 60
+                stage = Stage.FetchPublications(offset=offset)
 
-            if self._offset < self._pub_count:
-                return 5 * 60
-            else:
-                self._stage = 1
-                self._offset = 0
-                self._cit_offset = 0
-                return 30 * 60
+            return Step(
+                delay=delay,
+                stage=stage,
+                self_publications=self_publications,
+            )
 
-            return 60
+        elif isinstance(stage, Stage.FetchCitations):
+            _log.debug('running stage 1 at offset %d, %d', stage.pub_offset, stage.cit_offset)
 
-        # Fetching citations
-        elif self._stage == 1:
-            _log.debug('running stage 1 at offset %d, %d', self._offset, self._cit_offset)
-
-            if self._offset >= len(self._storage.user_pub_ids):
+            if stage.pub_offset >= len(self._storage.user_pub_ids):
                 _log.debug('checked all publications')
-                self._stage = 0
-                self._offset = 0
-                return 24 * 60 * 60
+                return Step(
+                    delay=24 * 60 * 60,
+                    stage=self.initial_stage(),
+                )
 
-            pub_id = self._storage.user_pub_ids[self._offset]
+            pub_id = self._storage.user_pub_ids[stage.pub_offset]
             pub = self._storage.load_pub(pub_id)
 
             if pub.extra['cit-count'] == 0:
                 _log.debug('no citations to check for this publication')
-                self._offset += 1
-                return 1
+                return Step(
+                    delay=1,
+                    stage=Stage.FetchCitations(pub_offset=stage.pub_offset + 1)
+                )
 
-            if pub.cit_paths is None:
-                pub.cit_paths = []
-
-            data = await miner.search_cited_by(pub_id, self._cit_offset)
+            data = await miner.search_cited_by(pub_id, stage.cit_offset)
 
             # The listed citations are less than the found count for some reason; however it's
             # unlikely that they are greater (so if we previously fetched 0 we don't bother
             # making additional network requests).
-            self._cit_count = data['keyValues']['total']
+            cit_count = data['keyValues']['total']
 
-            empty = True
-            for cit in adapt_publications(data):
-                empty = False
-                self._cit_offset += 1
-                self._storage.save_pub(cit)
-                pub.cit_paths.append(cit.unique_path_name())
+            citations = list(adapt_publications(data))
+            cit_offset = stage.cit_offset + len(citations)
 
-            self._storage.save_pub(pub)
-
-            if empty:
-                _log.info('stage 1 came out empty at %d/%d', self._cit_offset, self._cit_count)
-                self._cit_offset = self._cit_count
+            if cit_offset >= cit_count or not citations:
+                delay = 30 * 60
+                stage = Stage.FetchCitations(pub_offset=stage.pub_offset + 1)
             else:
-                _log.debug('stage 1 at %d/%d', self._cit_offset, self._cit_count)
+                delay = 5 * 60
+                stage = Stage.FetchCitations(pub_offset=stage.pub_offset, cit_offset=cit_offset)
 
-            if self._cit_offset < self._cit_count:
-                return 5 * 60
-            else:
-                self._offset += 1
-                self._cit_offset = 0
-                return 30 * 60
+            return Step(
+                delay=delay,
+                stage=stage,
+                citations={pub_id: citations},
+            )

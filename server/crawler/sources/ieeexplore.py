@@ -6,6 +6,8 @@ import logging
 from typing import Generator
 from ...storage import Author, Publication
 from ..task import Task
+from dataclasses import dataclass
+from ..step import Step
 
 _log = logging.getLogger(__name__)
 
@@ -157,16 +159,27 @@ def adapt_citations(data) -> Generator[Publication, None, None]:
             }
         )
 
+class Stage:
+    @dataclass
+    class FetchPublications:
+        INDEX = 0
+
+    @dataclass
+    class FetchCitations:
+        INDEX = 1
+        offset: int = 0
+
 
 class CrawlExplore(Task):
-    def __init__(self, root):
-        super().__init__(root)
-        self._stage = 0
-        self._offset = None
+    Stage = Stage
 
     @classmethod
     def namespace(cls):
         return 'ieeexplore'
+
+    @classmethod
+    def initial_stage(cls):
+        return Stage.FetchPublications()
 
     @classmethod
     def fields(cls):
@@ -182,60 +195,39 @@ class CrawlExplore(Task):
         self._storage.user_author_id = author_id_from_url(value)
         self._storage.user_pub_ids = []
         self._due = 0
-        self._stage = 0
-        self._offset = None
 
-    def _load(self, data):
-        self._stage = data['stage']
-        self._offset = data['offset']
-
-    def _save(self):
-        return {
-            'stage': self._stage,
-            'offset': self._offset,
-        }
-
-    async def _step(self, session):
+    async def _step(self, stage, session) -> Step:
         if not self._storage.user_author_id:
-            return 24 * 60 * 60
+            return Step(delay=24 * 60 * 60, stage=None)
 
         # TODO not sure how offsets work here, there's so little data for the author we care in this site so can't test
 
-        # Fetching publications
-        if self._stage == 0:
+        if isinstance(stage, Stage.FetchPublications):
             _log.debug('running stage 0')
             data = await fetch_author(session, self._storage.user_author_id)
-
-            for pub in adapt_publications(data):
-                self._storage.user_pub_ids.append(pub.id)
-                self._storage.save_pub(pub)
-
-            self._stage = 1
-            self._offset = 0
-            return 10 * 60
+            self_publications = list(adapt_publications(data))
+            return Step(
+                delay=10 * 60,
+                stage=Stage.FetchCitations(),
+                self_publications=self_publications,
+            )
 
         # Fetching publications
-        elif self._stage == 1:
-            if self._offset >= len(self._storage.user_pub_ids):
-                self._stage = 0
-                self._offset = None
-                return 24 * 60 * 60
+        elif isinstance(stage, Stage.FetchCitations):
+            if stage.offset >= len(self._storage.user_pub_ids):
+                return Step(
+                    delay=24 * 60 * 60,
+                    stage=self.initial_stage(),
+                )
 
-            _log.debug('running stage 1 at %d', self._offset)
+            _log.debug('running stage 1 at %d', stage.offset)
 
-            pub_id = self._storage.user_pub_ids[self._offset]
-            pub = self._storage.load_pub(pub_id)
-
-            if pub.cit_paths is None:
-                pub.cit_paths = []
-
+            pub_id = self._storage.user_pub_ids[stage.offset]
             data = await fetch_citations(session, pub_id)
-            self._offset += 1
+            citations = list(adapt_citations(data))
 
-            for cit in adapt_citations(data):
-                self._storage.save_pub(cit)
-                pub.cit_paths.append(cit.unique_path_name())
-
-            self._storage.save_pub(pub)
-
-            return 10 * 60
+            return Step(
+                delay=10 * 60,
+                stage=Stage.FetchCitations(offset=stage.offset + 1),
+                citations={pub_id: citations},
+            )

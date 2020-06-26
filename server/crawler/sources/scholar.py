@@ -11,6 +11,8 @@ import bs4
 
 from ...storage import Author, Publication
 from ..task import Task
+from dataclasses import dataclass
+from ..step import Step
 
 _PAGE_CACHE = True  # for debugging purposes
 
@@ -299,17 +301,37 @@ PUBLICATION_DELAY = 60 * 60
 CITATION_DELAY = 5 * 60
 FULL_DELAY = 24 * 60 * 60
 
+class Stage:
+    @dataclass
+    class FetchFirst:
+        INDEX = 0
+
+    @dataclass
+    class FetchPublications:
+        INDEX = 1
+        offset: int = _PAGE_SIZE
+
+    @dataclass
+    class FetchSinglePublication:
+        INDEX = 2
+        offset: int = 0
+
+    @dataclass
+    class FetchCitations:
+        INDEX = 3
+        offset: int
+        cit_url: str
 
 class CrawlScholar(Task):
-    def __init__(self, root):
-        super().__init__(root)
-        self._stage = 0  # int
-        self._offset = None  # int
-        self._cit_offset = None  # url
+    Stage = Stage
 
     @classmethod
     def namespace(cls):
         return 'scholar'
+
+    @classmethod
+    def initial_stage(cls):
+        return Stage.FetchFirst()
 
     @classmethod
     def fields(cls):
@@ -326,111 +348,89 @@ class CrawlScholar(Task):
         self._storage.user_author_id = author_id_from_url(value)
         self._storage.user_pub_ids = []
         self._due = 0
-        self._stage = 0
-        self._offset = None
-        self._cit_offset = None
 
-    def _load(self, data):
-        self._stage = data['stage']
-        self._offset = data['offset']
-        self._cit_offset = data['cit-offset']
+    async def _step(self, stage, session) -> Step:
+        if not self._storage.user_author_id:
+            return Step(delay=FULL_DELAY, stage=None)
 
-    def _save(self):
-        return {
-            'stage': self._stage,
-            'offset': self._offset,
-            'cit-offset': self._cit_offset,
-        }
-
-    async def _step(self, session):
-        author_id = self._storage.user_author_id
-        if not author_id:
-            return FULL_DELAY
-
-        # Initial load
-        if self._stage == 0:
+        if isinstance(stage, Stage.FetchFirst):
             _log.debug('running stage 0')
-            soup = await _get_page(session, _URL_AUTHOR.format(author_id))
-            author, publications, pubs_remain = parse_author_profile(soup)
-
-            self._storage.save_author(author)
-
-            self._storage.user_pub_ids.extend(pub.id for pub in publications)
-            for pub in publications:
-                self._storage.save_pub(pub)
+            soup = await _get_page(session, _URL_AUTHOR.format(self._storage.user_author_id))
+            self_author, self_publications, pubs_remain = parse_author_profile(soup)
 
             if pubs_remain:
-                self._stage = 1
-                self._offset = _PAGE_SIZE
-                return PROFILE_DELAY
+                return Step(
+                    delay=PROFILE_DELAY,
+                    stage=Stage.FetchPublications(),
+                    self_author=self_author,
+                    self_publications=self_publications,
+                )
             else:
-                self._offset = -1
-                return self._next_pub_offset()
+                return Step(
+                    delay=PUBLICATION_DELAY,
+                    stage=Stage.FetchSinglePublication(),
+                    self_author=self_author,
+                    self_publications=self_publications,
+                )
 
-        # Main page but with more results (offset advances by page size)
-        elif self._stage == 1:
-            _log.debug('running stage 1 at offset %d', self._offset)
-            soup = await _get_page(session, _URL_AUTHOR.format(author_id) + f'&cstart={self._offset}')
-            publications, pubs_remain = parse_author_profile_publications(soup)
-
-            self._storage.user_pub_ids.extend(pub.id for pub in publications)
-            for pub in publications:
-                # At the moment, basic publication information
-                self._storage.save_pub(pub)
+        elif isinstance(stage, Stage.FetchPublications):
+            _log.debug('running stage 1 at offset %d', stage.offset)
+            soup = await _get_page(session, _URL_AUTHOR.format(self._storage.user_author_id) + f'&cstart={stage.offset}')
+            self_publications, pubs_remain = parse_author_profile_publications(soup)
 
             if pubs_remain:
-                # stay in stage 1
-                self._offset += _PAGE_SIZE
-                return PROFILE_DELAY
+                return Step(
+                    delay=PROFILE_DELAY,
+                    stage=Stage.FetchPublications(offset=stage.offset + len(self_publications)),
+                    self_publications=self_publications,
+                )
             else:
-                self._offset = -1
-                return self._next_pub_offset()  # stage 2 or 4
+                return Step(
+                    delay=PUBLICATION_DELAY,
+                    stage=Stage.FetchSinglePublication(),
+                    self_publications=self_publications,
+                )
 
-        # Publications, one by one (offset is an index into the publications)
-        elif self._stage == 2:
-            _log.debug('running stage 2 at offset %d', self._offset)
-            soup = await _get_page(session, _URL_PUBLICATION.format(self._storage.user_pub_ids[self._offset]))
+        elif isinstance(stage, Stage.FetchSinglePublication):
+            if stage.offset >= len(self._storage.user_pub_ids):
+                return Step(
+                    delay=FULL_DELAY,
+                    stage=self.initial_stage(),
+                )
+
+            _log.debug('running stage 2 at offset %d', stage.offset)
+            soup = await _get_page(session, _URL_PUBLICATION.format(self._storage.user_pub_ids[stage.offset]))
             pub, cit_url = parse_publication(soup)
 
-            # Save complete, updated publication information
-            self._storage.save_pub(pub)
-
             if cit_url:
-                self._stage = 3
-                self._cit_offset = cit_url
-                return CITATION_DELAY
+                return Step(
+                    delay=CITATION_DELAY,
+                    stage=Stage.FetchCitations(offset=stage.offset, cit_url=cit_url),
+                    self_publications=[pub],
+                )
             else:
-                return self._next_pub_offset()  # stage 2 or 4
+                return Step(
+                    delay=PUBLICATION_DELAY,
+                    stage=Stage.FetchSinglePublication(offset=stage.offset + 1),
+                    self_publications=[pub],
+                )
 
-        # Parsing citation pages
-        elif self._stage == 3:
-            _log.debug('running stage 3 at offset %s', self._cit_offset)
-            soup = await _get_page(session, url=self._cit_offset)
+        elif isinstance(stage, Stage.FetchCitations):
+            _log.debug('running stage 3 at offset %s', stage.cit_url)
+            soup = await _get_page(session, url=stage.cit_url)
             citations, cit_url = parse_citations(soup)
 
-            pub_id = self._storage.user_pub_ids[self._offset]
-            pub = self._storage.load_pub(pub_id)
-            if pub.cit_paths is None:
-                pub.cit_paths = []
-
-            for cit in citations:
-                self._storage.save_pub(cit)
-                pub.cit_paths.append(cit.unique_path_name())
-
-            self._storage.save_pub(pub)
+            pub_id = self._storage.user_pub_ids[stage.offset]
 
             if cit_url:
-                # stay in stage 3
-                self._cit_offset = cit_url
-                return CITATION_DELAY
+                return Step(
+                    delay=CITATION_DELAY,
+                    stage=Stage.FetchCitations(offset=stage.offset, cit_url=cit_url),
+                    citations={pub_id: citations},
+                )
             else:
-                return self._next_pub_offset()  # stage 2 or 4
-
-    def _next_pub_offset(self):
-        self._offset += 1
-        if self._offset >= len(self._storage.user_pub_ids):
-            self._stage = 0
-            return FULL_DELAY
-        else:
-            self._stage = 2
-            return PUBLICATION_DELAY
+                return Step(
+                    delay=PUBLICATION_DELAY,
+                    stage=Stage.FetchSinglePublication(offset=stage.offset + 1),
+                    citations={pub_id: citations},
+                )

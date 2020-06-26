@@ -100,6 +100,7 @@ class Storage:
 
     def load_pub(self, iden) -> Publication:
         data = {}
+        # TODO not ideal to make a pub instance just for the name
         path = self._root / Publication(id=iden).unique_path_name()
         utils.try_load_json(data, path)
         return Publication(**data)
