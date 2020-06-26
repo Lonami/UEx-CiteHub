@@ -14,8 +14,8 @@ import logging
 import urllib.parse
 import bs4
 from typing import Generator
-from ..storage import Author, Publication
-from .task import Task
+from ...storage import Author, Publication
+from ..task import Task
 
 _log = logging.getLogger(__name__)
 

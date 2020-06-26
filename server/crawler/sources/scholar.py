@@ -9,8 +9,8 @@ from typing import AsyncGenerator, Optional, List
 import aiohttp
 import bs4
 
-from ..storage import Author, Publication
-from .task import Task
+from ...storage import Author, Publication
+from ..task import Task
 
 _PAGE_CACHE = True  # for debugging purposes
 

@@ -9,12 +9,7 @@ from pathlib import Path
 
 from aiohttp import ClientSession
 
-from .aminer import CrawlArnetMiner
-from .scholar import CrawlScholar
-from .msacademics import CrawlAcademics
-from .ieeexplore import CrawlExplore
-from .researchgate import CrawlResearchGate
-from .dimensions import CrawlDimensions
+from .sources import CRAWLERS
 from .. import utils
 
 
@@ -27,14 +22,7 @@ class _Tasks:
     def __init__(self, root: Path):
         self._root = root
         self._tasks = {}
-        for cls in (
-                CrawlScholar,
-                CrawlAcademics,
-                CrawlArnetMiner,
-                CrawlExplore,
-                CrawlResearchGate,
-                CrawlDimensions,
-        ):
+        for cls in CRAWLERS:
             if cls.namespace() in self._tasks:
                 raise ValueError(
                     f'two different tasks have the same namespace "{cls.namespace()}": '

@@ -12,8 +12,9 @@ Both the cookie and X-CSRF-Token headers may also need to be necessary, with ref
 import urllib.parse
 import logging
 from typing import Generator, Tuple, Optional
-from ..storage import Author, Publication
-from .task import Task
+from ...storage import Author, Publication
+from ..task import Task
+
 
 _log = logging.getLogger(__name__)
 

@@ -18,8 +18,8 @@ import urllib.parse
 import logging
 from typing import Generator, List, Tuple
 
-from ..storage import Author, Publication
-from .task import Task
+from ...storage import Author, Publication
+from ..task import Task
 
 _log = logging.getLogger(__name__)
 
