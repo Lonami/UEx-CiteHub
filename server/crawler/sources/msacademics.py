@@ -309,7 +309,7 @@ class CrawlAcademics(Task):
         # Fetching citations
         elif self._stage == 2:
             _log.debug('running stage 2 on %s (%s), offset %d', self._pub_expr, self._query, self._offset)
-            data = await fetch_citations(session, self._pub_expr, self._query, self._offset)
+            data = await fetch_citations(session, self._cit_expr, self._query, self._offset)
             self._cit_count = data['sr']['t']
 
             empty = True
