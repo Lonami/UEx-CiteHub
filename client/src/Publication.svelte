@@ -49,8 +49,15 @@
     </td>
     <td class="title">
         <p class="name">{publication.name}</p>
-        <p class="authors">{publication.authors}</p>
-        <p class="publisher">{publication.publisher}</p>
+        <p class="authors">
+            {#each publication.authors.slice(0, -1) as author}
+                {author.full_name}{", "}
+            {/each}
+            {#if publication.authors.length > 0}
+                {publication.authors[publication.authors.length - 1].full_name}
+            {/if}
+        </p>
+        <!-- <p class="publisher">{publication.publisher}</p> -->
     </td>
     <td class="cites">
         {#if publication.cites === null}
@@ -59,5 +66,5 @@
             {publication.cites}
         {/if}
     </td>
-    <td class="year">{publication.year}</td>
+    <!-- <td class="year">{publication.year}</td> -->
 </tr>

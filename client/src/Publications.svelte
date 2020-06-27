@@ -27,7 +27,7 @@
                     <th>Source</th>
                     <th>Title</th>
                     <th>Cited by</th>
-                    <th>Year</th>
+                    <!-- <th>Year</th> -->
                 </tr>
             </thead>
             <tbody>

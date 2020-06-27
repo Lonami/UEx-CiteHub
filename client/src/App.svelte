@@ -3,7 +3,7 @@
 
     import ProfileInfo from './ProfileInfo.svelte';
     import ProfileSettings from './ProfileSettings.svelte';
-    // import Publications from './Publications.svelte';
+    import Publications from './Publications.svelte';
 
     let settings_open = false;
 
@@ -16,11 +16,12 @@
 
 <style>
 .settings {
-    position: absolute;
+    position: fixed;
     top: 0;
     width: 100%;
     height: 100%;
     background-color: rgba(255, 255, 255, 0.7);
+    padding: 1em;
 }
 
 .settings div {
@@ -31,6 +32,7 @@
     background-color: #fff;
     padding: 1em;
     position: relative;
+    border: 1px solid #000;
 }
 
 .close {
@@ -62,6 +64,8 @@
 <ProfileInfo/>
 
 <button on:click={e => settings_open = true}>Settings</button>
+
+<Publications/>
 
 {#if settings_open}
     <div class="settings" on:click={clicked_out_settings} transition:fade={{duration: 100}}>

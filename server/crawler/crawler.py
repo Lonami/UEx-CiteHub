@@ -66,6 +66,10 @@ class Crawler:
         self._crawl_notify = asyncio.Event()
         self._client_session = ClientSession()
 
+    def storages(self):
+        # TODO not sure what the best way to access storages is
+        return {t.namespace(): t._storage for t in self._tasks.tasks()}
+
     async def _crawl(self):
         try:
             while True:
@@ -137,25 +141,25 @@ class Crawler:
         # Sources and tasks will be in sync as we update them, which means there is no need to
         # synchronize the tasks based on the sources we loaded but we still need both to let the
         # user know what sources they have configured.
-        if not self._enabled:
-            return
-
         _log.info('entering crawler')
-        await self._client_session.__aenter__()
 
         utils.try_load_json(self._sources, self._sources_file)
         self._tasks.load()
 
         # Crawling is a long-running task we can't block on
-        self._crawl_task = asyncio.create_task(self._crawl())
+        if self._enabled:
+            await self._client_session.__aenter__()
+            self._crawl_task = asyncio.create_task(self._crawl())
+
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
+        _log.info('exiting crawler')
+        self.save()
+
         if not self._enabled:
             return
 
-        _log.info('exiting crawler')
-        self.save()
         self._crawl_task.cancel()
         try:
             await self._crawl_task

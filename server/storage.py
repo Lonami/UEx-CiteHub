@@ -103,6 +103,7 @@ class Storage:
         # TODO not ideal to make a pub instance just for the name
         path = self._root / Publication(id=iden).unique_path_name()
         utils.try_load_json(data, path)
+        # TODO the nested author doesn't get loaded correctly
         return Publication(**data)
 
     def load(self):
