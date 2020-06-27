@@ -1,4 +1,11 @@
 <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" width="100" height="100">
-  <rect width="100" height="100" fill="#046"/>
-  <text x="5" y="70" style="font: italic 60px sans-serif; fill: #fff;">IE</text>
+  <defs>
+    <linearGradient id="bg" gradientTransform="rotate(315)">
+      <stop offset="0" stop-color="#006598"/>
+      <stop offset="0.5" stop-color="#003181"/>
+      <stop offset="1" stop-color="#000000"/>
+    </linearGradient>
+  </defs>
+  <rect fill="url(#bg)" height="100" width="100"/>
+  <text font-size="40px" fill="#fff" y="66" x="5">IEEE</text>
 </svg>
