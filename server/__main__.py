@@ -3,12 +3,12 @@ def main():
     from . import server
 
     app = server.create_app()
-    logging.info('server application is up and running')
+    logging.info("server application is up and running")
     try:
         app.run()
     finally:
-        logging.info('server was shut down')
+        logging.info("server was shut down")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

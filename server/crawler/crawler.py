@@ -26,7 +26,7 @@ class _Tasks:
             if cls.namespace() in self._tasks:
                 raise ValueError(
                     f'two different tasks have the same namespace "{cls.namespace()}": '
-                    f'{self._tasks[cls.namespace()].__class__.__name__} and {cls.__name__}'
+                    f"{self._tasks[cls.namespace()].__class__.__name__} and {cls.__name__}"
                 )
             else:
                 self._tasks[cls.namespace()] = cls(root)
@@ -38,19 +38,20 @@ class _Tasks:
         self._tasks[namespace].set_field(key, value)
 
     def load(self):
-        _log.info('loading tasks')
+        _log.info("loading tasks")
         for task in self.tasks():
-            _log.debug('loading task %s', task.namespace())
+            _log.debug("loading task %s", task.namespace())
             task.load()
 
     def save(self):
-        _log.info('saving tasks')
+        _log.info("saving tasks")
         for task in self.tasks():
-            _log.debug('saving task %s', task.namespace())
+            _log.debug("saving task %s", task.namespace())
             task.save()
 
     def next_task(self):
         return min(self.tasks())
+
 
 class Crawler:
     # The crawler just runs tasks
@@ -61,7 +62,7 @@ class Crawler:
         self._tasks = _Tasks(self._root)
         # Contains the required fields for the various tasks (persisted only for the frontend)
         # {namespace: {key, value}}
-        self._sources_file = self._root / 'external-sources.json'
+        self._sources_file = self._root / "external-sources.json"
         self._sources = {task.namespace(): {} for task in self._tasks.tasks()}
         self._crawl_notify = asyncio.Event()
         self._client_session = ClientSession()
@@ -82,19 +83,19 @@ class Crawler:
                 if await self._wait_notify(delay):
                     continue  # tasks changed so we don't want to step on any
 
-                _log.debug('stepping task %s', task.namespace())
+                _log.debug("stepping task %s", task.namespace())
                 await task.step(self._client_session)
                 task.save()
         except asyncio.CancelledError:
             raise
         except Exception:
-            _log.exception('unhandled exception in crawl task')
+            _log.exception("unhandled exception in crawl task")
 
     async def _wait_notify(self, delay):
         try:
             self._crawl_notify.clear()
             await asyncio.wait_for(self._crawl_notify.wait(), delay)
-            _log.debug('got notification to retry crawling')
+            _log.debug("got notification to retry crawling")
             return True
         except asyncio.TimeoutError:
             return False
@@ -103,11 +104,13 @@ class Crawler:
         fields = []
         for task in self._tasks.tasks():
             for key, description in task.fields().items():
-                fields.append({
-                    'key': f'{task.namespace()}.{key}',
-                    'description': description,
-                    'value': self._sources[task.namespace()].get(key),
-                })
+                fields.append(
+                    {
+                        "key": f"{task.namespace()}.{key}",
+                        "description": description,
+                        "value": self._sources[task.namespace()].get(key),
+                    }
+                )
 
         return fields
 
@@ -116,14 +119,14 @@ class Crawler:
             return
 
         for key, value in sources.items():
-            namespace, key = key.split('.')
+            namespace, key = key.split(".")
             value = value.strip()
 
             if value == self._sources[namespace].get(key):
-                _log.debug('source %s has not changed', key)
+                _log.debug("source %s has not changed", key)
                 continue  # nothing to do
 
-            _log.info('updating source %s to %s', key, value)
+            _log.info("updating source %s to %s", key, value)
             self._sources[namespace][key] = value
 
             # It is possible that we update the sources and not tasks, but very unlikely
@@ -141,7 +144,7 @@ class Crawler:
         # Sources and tasks will be in sync as we update them, which means there is no need to
         # synchronize the tasks based on the sources we loaded but we still need both to let the
         # user know what sources they have configured.
-        _log.info('entering crawler')
+        _log.info("entering crawler")
 
         utils.try_load_json(self._sources, self._sources_file)
         self._tasks.load()
@@ -154,7 +157,7 @@ class Crawler:
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        _log.info('exiting crawler')
+        _log.info("exiting crawler")
         self.save()
 
         if not self._enabled:

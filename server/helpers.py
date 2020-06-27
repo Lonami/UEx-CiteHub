@@ -10,5 +10,8 @@ def get_log_level(level):
     if isinstance(value, int):
         return value
     else:
-        print(f'note:  illegal logging level {level}, using default unset', file=sys.stderr)
+        print(
+            f"note:  illegal logging level {level}, using default unset",
+            file=sys.stderr,
+        )
         return logging.NOTSET

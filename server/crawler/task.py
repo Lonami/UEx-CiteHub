@@ -26,11 +26,13 @@ class Task(abc.ABC):
     # subclasses know how to update the profile data. Every task also has its own profile.
     def __init__(self, root):
         if not isinstance(self.Stage, type):
-            raise RuntimeError('task subclass should define a nested Stage class')
+            raise RuntimeError("task subclass should define a nested Stage class")
 
         self._root = root / self.namespace()
-        self._task_file = self._root / 'task.json'
-        self._storage = Storage(self._root)  # TODO maybe storage should have the task too?
+        self._task_file = self._root / "task.json"
+        self._storage = Storage(
+            self._root
+        )  # TODO maybe storage should have the task too?
         self._due = 0
         self._stage = self.initial_stage()
 
@@ -69,13 +71,13 @@ class Task(abc.ABC):
         self._storage.load()
 
         try:
-            with self._task_file.open(encoding='utf-8') as fd:
+            with self._task_file.open(encoding="utf-8") as fd:
                 data = json.load(fd)
         except FileNotFoundError:
             return
 
-        delta = data.pop('due') - time.time()
-        stage_index = data.pop('_index')
+        delta = data.pop("due") - time.time()
+        stage_index = data.pop("_index")
         self._due = asyncio.get_event_loop().time() + delta
         for field in dir(self.Stage):
             Field = getattr(self.Stage, field)
@@ -86,20 +88,20 @@ class Task(abc.ABC):
         self._storage.save()
 
         data = asdict(self._stage)
-        data['_index'] = self._stage.INDEX
+        data["_index"] = self._stage.INDEX
         delta = self._due - asyncio.get_event_loop().time()
-        data['due'] = time.time() + delta
+        data["due"] = time.time() + delta
 
         if not self._task_file.parent.is_dir():
             self._task_file.parent.mkdir()
 
-        with self._task_file.open('w', encoding='utf-8') as fd:
+        with self._task_file.open("w", encoding="utf-8") as fd:
             json.dump(data, fd)
 
     async def step(self, session):
         step = await self._step(self._stage, session)
         if not isinstance(step, Step):
-            raise TypeError(f'step returned invalid data: {step}')
+            raise TypeError(f"step returned invalid data: {step}")
 
         # TODO do we need self author? we already know our id
         if step.self_author:

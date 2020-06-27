@@ -25,36 +25,44 @@ from ..step import Step
 
 _log = logging.getLogger(__name__)
 
+
 def new_filtered_dict(**kwargs):
     return {k: v for k, v in kwargs.items() if v is not None}
 
 
 class Academics:
-    def __init__(self, session, api_key, base_url='https://api.labs.cognitive.microsoft.com/academic/v1.0/'):
+    def __init__(
+        self,
+        session,
+        api_key,
+        base_url="https://api.labs.cognitive.microsoft.com/academic/v1.0/",
+    ):
         self._session = session
         self._headers = {
-            'Ocp-Apim-Subscription-Key': api_key,
-            'Accept': 'application/json'
+            "Ocp-Apim-Subscription-Key": api_key,
+            "Accept": "application/json",
         }
         self._base_url = base_url
 
     async def interpret(self, query):
-        url = self._base_url + 'interpret'
-        async with self._session.get(url, params={'query': query}, headers=self._headers) as resp:
+        url = self._base_url + "interpret"
+        async with self._session.get(
+            url, params={"query": query}, headers=self._headers
+        ) as resp:
             if resp.status == 200:
                 return await resp.json()
             else:
-                raise ValueError(f'HTTP {resp.status} fetching {url}')
+                raise ValueError(f"HTTP {resp.status} fetching {url}")
 
     async def evaluate(
-            self,
-            expr: str,
-            *,
-            model: str = None,
-            count: int = None,
-            offset: int = None,
-            orderby: str = None,
-            attributes: str = None
+        self,
+        expr: str,
+        *,
+        model: str = None,
+        count: int = None,
+        offset: int = None,
+        orderby: str = None,
+        attributes: str = None,
     ):
         """
         Parameters
@@ -103,112 +111,134 @@ class Academics:
 
             Duplicate attributes are fine.
         """
-        url = self._base_url + 'evaluate'
-        async with self._session.get(url, params=new_filtered_dict(
-            expr=expr,
-            model=model,
-            count=count,
-            offset=offset,
-            orderby=orderby,
-            attributes=attributes
-        ), headers=self._headers) as resp:
+        url = self._base_url + "evaluate"
+        async with self._session.get(
+            url,
+            params=new_filtered_dict(
+                expr=expr,
+                model=model,
+                count=count,
+                offset=offset,
+                orderby=orderby,
+                attributes=attributes,
+            ),
+            headers=self._headers,
+        ) as resp:
             if resp.status == 200:
                 return await resp.json()
             else:
-                raise ValueError(f'HTTP {resp.status} fetching {url}')
+                raise ValueError(f"HTTP {resp.status} fetching {url}")
 
 
 def author_id_from_url(url):
     url = urllib.parse.urlparse(url)
-    assert url.netloc == 'academic.microsoft.com'
-    parts = url.path.split('/')
-    assert parts[1] == 'profile'
+    assert url.netloc == "academic.microsoft.com"
+    parts = url.path.split("/")
+    assert parts[1] == "profile"
     return parts[2]
 
 
 async def fetch_profile(session, iden):
     # Note: the author ID from here is not the one we actually expect and using it in the real API will fail
-    async with session.post('https://academic.microsoft.com/api/user/profile', json=iden) as resp:
+    async with session.post(
+        "https://academic.microsoft.com/api/user/profile", json=iden
+    ) as resp:
         return await resp.json()
 
+
 def adapt_profile(profile) -> Author:
-    entity = profile['entity']
-    inst = entity.get('i', {})
+    entity = profile["entity"]
+    inst = entity.get("i", {})
     return Author(
         # An author may have actually published papers under a different ID
-        id=str(entity['id']),
-        full_name=entity['dn'],
+        id=str(entity["id"]),
+        full_name=entity["dn"],
         extra={
-            'profile-id': entity['profileId'],
-            'latitude': inst.get('lat'),
-            'longitude': inst.get('lon'),
-            'institution': inst.get('dn'),
-            'institution-desc': inst.get('d'),
-            'institution-logo': inst.get('iurl'),
-            'alternate-name': entity.get('an'),
-            'web-profiles': entity.get('w'),
-        }
+            "profile-id": entity["profileId"],
+            "latitude": inst.get("lat"),
+            "longitude": inst.get("lon"),
+            "institution": inst.get("dn"),
+            "institution-desc": inst.get("d"),
+            "institution-logo": inst.get("iurl"),
+            "alternate-name": entity.get("an"),
+            "web-profiles": entity.get("w"),
+        },
     )
+
 
 _FETCH_SIZE = 10  # capped to 10
 
+
 def _expr_query(expr, query, offset):
     return {
-        'query': query,  # seems needed to get original papers when fetching citations
-        'queryExpression': expr,
-        'filters': [],
-        'orderBy': 0,
-        'skip': offset,
-        'sortAscending': True,
-        'take': _FETCH_SIZE,
-        'includeCitationContexts': True,
+        "query": query,  # seems needed to get original papers when fetching citations
+        "queryExpression": expr,
+        "filters": [],
+        "orderBy": 0,
+        "skip": offset,
+        "sortAscending": True,
+        "take": _FETCH_SIZE,
+        "includeCitationContexts": True,
         # 'profileId': '<uuid4 from expr>',
     }
 
 
 async def fetch_publications(session, expr, query, offset):
-    async with session.post('https://academic.microsoft.com/api/search', json=_expr_query(expr, query, offset)) as resp:
+    async with session.post(
+        "https://academic.microsoft.com/api/search",
+        json=_expr_query(expr, query, offset),
+    ) as resp:
         return await resp.json()
 
+
 def _adapt_paper(paper) -> Publication:
-    publisher = paper['v']
-    _sources = paper['s']  # source type 0 and 1 has link
-    authors = paper['a']
+    publisher = paper["v"]
+    _sources = paper["s"]  # source type 0 and 1 has link
+    authors = paper["a"]
     return Publication(
-        id=str(paper['id']),
-        name=paper['dn'],
+        id=str(paper["id"]),
+        name=paper["dn"],
         authors=[
             Author(
-                full_name=author['dn'],
-                extra={
-                    'institutions': [inst['dn'] for inst in author['i']],
-                }
+                full_name=author["dn"],
+                extra={"institutions": [inst["dn"] for inst in author["i"]],},
             )
             for author in authors
         ],
         extra={
-            'description': paper['d'],
-            'publisher': publisher.get('displayName'),  # id 0 won't have this field and the rest empty
-            'volume': publisher['volume'] or None,
-            'issue': publisher['issue'] or None,
-            'first-page': publisher['firstPage'] or None,
-            'last-page': publisher['lastPage'] or None,
-            'date': publisher['publishedDate'],
-        }
+            "description": paper["d"],
+            "publisher": publisher.get(
+                "displayName"
+            ),  # id 0 won't have this field and the rest empty
+            "volume": publisher["volume"] or None,
+            "issue": publisher["issue"] or None,
+            "first-page": publisher["firstPage"] or None,
+            "last-page": publisher["lastPage"] or None,
+            "date": publisher["publishedDate"],
+        },
     )
 
+
 def adapt_publications(data) -> Generator[Publication, None, None]:
-    paper_results = data['pr']
+    paper_results = data["pr"]
     for paper in paper_results:
-        yield _adapt_paper(paper['paper'])
+        yield _adapt_paper(paper["paper"])
+
 
 async def fetch_citations(session, expr, query, offset):
-    async with session.post('https://academic.microsoft.com/api/edpsearch/citations', json=_expr_query(expr, query, offset)) as resp:
+    async with session.post(
+        "https://academic.microsoft.com/api/edpsearch/citations",
+        json=_expr_query(expr, query, offset),
+    ) as resp:
         return await resp.json()
 
+
 def adapt_citations(data) -> Generator[Tuple[Publication, List[str]], None, None]:
-    for paper in data['rpi']:
-        yield _adapt_paper(paper['paper']), [paper['paperId'] for paper in paper['originalPaperLinks']]
+    for paper in data["rpi"]:
+        yield _adapt_paper(paper["paper"]), [
+            paper["paperId"] for paper in paper["originalPaperLinks"]
+        ]
+
 
 class Stage:
     @dataclass
@@ -231,12 +261,13 @@ class Stage:
         query: str
         offset: int = 0
 
+
 class CrawlAcademics(Task):
     Stage = Stage
 
     @classmethod
     def namespace(cls):
-        return 'academics'
+        return "academics"
 
     @classmethod
     def initial_stage(cls):
@@ -245,14 +276,13 @@ class CrawlAcademics(Task):
     @classmethod
     def fields(cls):
         return {
-            'url':
-                'Navigate to <a href="https://academic.microsoft.com/home">Microsoft Academic\'s '
-                'home</a> and search for your profile. Click on it when you find it and copy the '
-                'URL.'
+            "url": 'Navigate to <a href="https://academic.microsoft.com/home">Microsoft Academic\'s '
+            "home</a> and search for your profile. Click on it when you find it and copy the "
+            "URL."
         }
 
     def set_field(self, key, value):
-        assert key == 'url'
+        assert key == "url"
         self._storage.user_author_id = author_id_from_url(value)
         self._storage.user_pub_ids = []
         self._due = 0
@@ -262,21 +292,28 @@ class CrawlAcademics(Task):
             return Step(delay=24 * 60 * 60, stage=None)
 
         if isinstance(stage, Stage.FetchQueries):
-            _log.debug('running stage 0 on %s', self._storage.user_author_id)
+            _log.debug("running stage 0 on %s", self._storage.user_author_id)
             data = await fetch_profile(session, self._storage.user_author_id)
             return Step(
                 delay=1,
                 stage=Stage.FetchPublications(
-                    pub_count=data['entity']['pc'],
-                    pub_expr=data['publicationsExpression'],
-                    cit_expr=data['citedByExpression'],
-                    query=data['entity']['dn'],
+                    pub_count=data["entity"]["pc"],
+                    pub_expr=data["publicationsExpression"],
+                    cit_expr=data["citedByExpression"],
+                    query=data["entity"]["dn"],
                 ),
             )
 
         elif isinstance(stage, Stage.FetchPublications):
-            _log.debug('running stage 1 on %s (%s), offset %d', stage.pub_expr, stage.query, stage.offset)
-            data = await fetch_publications(session, stage.pub_expr, stage.query, stage.offset)
+            _log.debug(
+                "running stage 1 on %s (%s), offset %d",
+                stage.pub_expr,
+                stage.query,
+                stage.offset,
+            )
+            data = await fetch_publications(
+                session, stage.pub_expr, stage.query, stage.offset
+            )
 
             self_publications = list(adapt_publications(data))
             offset = stage.offset + len(self_publications)
@@ -284,8 +321,7 @@ class CrawlAcademics(Task):
                 return Step(
                     delay=30 * 60,
                     stage=Stage.FetchCitations(
-                        cit_expr=stage.cit_expr,
-                        query=stage.query,
+                        cit_expr=stage.cit_expr, query=stage.query,
                     ),
                     self_publications=self_publications,
                 )
@@ -303,9 +339,16 @@ class CrawlAcademics(Task):
                 )
 
         elif isinstance(stage, Stage.FetchCitations):
-            _log.debug('running stage 2 on %s (%s), offset %d', stage.cit_expr, stage.query, stage.offset)
-            data = await fetch_citations(session, stage.cit_expr, stage.query, stage.offset)
-            cit_count = data['sr']['t']
+            _log.debug(
+                "running stage 2 on %s (%s), offset %d",
+                stage.cit_expr,
+                stage.query,
+                stage.offset,
+            )
+            data = await fetch_citations(
+                session, stage.cit_expr, stage.query, stage.offset
+            )
+            cit_count = data["sr"]["t"]
 
             citations = {}
             offset = stage.offset
@@ -315,16 +358,11 @@ class CrawlAcademics(Task):
                     citations.setdefault(cites_id, []).append(cit)
 
             if offset >= cit_count or not citations:
-                return Step(
-                    delay=30 * 60,
-                    stage=self.initial_stage(),
-                )
+                return Step(delay=30 * 60, stage=self.initial_stage(),)
             else:
                 return Step(
                     delay=2 * 60,
                     stage=Stage.FetchCitations(
-                        cit_expr=stage.cit_expr,
-                        query=stage.query,
-                        offset=offset,
-                    )
+                        cit_expr=stage.cit_expr, query=stage.query, offset=offset,
+                    ),
                 )

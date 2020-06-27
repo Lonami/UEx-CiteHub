@@ -23,84 +23,74 @@ _log = logging.getLogger(__name__)
 
 
 async def fetch_token_sid(session):
-    async with session.get(f'https://www.researchgate.net/refreshToken') as resp:
-        for header in resp.headers.getall('set-cookie'):
-            if header.startswith('sid='):
-                sid = header[4:header.index(';')]
+    async with session.get(f"https://www.researchgate.net/refreshToken") as resp:
+        for header in resp.headers.getall("set-cookie"):
+            if header.startswith("sid="):
+                sid = header[4 : header.index(";")]
                 break
         else:
-            raise ValueError('sid cookie not found')
+            raise ValueError("sid cookie not found")
 
-        rg_token = (await resp.json())['requestToken']
+        rg_token = (await resp.json())["requestToken"]
         return rg_token, sid
 
 
 async def fetch_author(session, author_id):
-    async with session.get(f'https://www.researchgate.net/profile/{author_id}') as resp:
+    async with session.get(f"https://www.researchgate.net/profile/{author_id}") as resp:
         resp.raise_for_status()
-        return bs4.BeautifulSoup(await resp.text(), 'html.parser')
+        return bs4.BeautifulSoup(await resp.text(), "html.parser")
 
 
 async def fetch_citations(session, rg_token, sid, pub_id, offset):
     async with session.post(
-        f'https://www.researchgate.net/lite.PublicationDetailsLoadMore.getCitationsByOffset.html'
-        f'?publicationUid={pub_id}&offset={offset}',
-        headers={
-            'Rg-Request-Token': rg_token,
-            'Cookie': f'sid={sid}',
-        }
+        f"https://www.researchgate.net/lite.PublicationDetailsLoadMore.getCitationsByOffset.html"
+        f"?publicationUid={pub_id}&offset={offset}",
+        headers={"Rg-Request-Token": rg_token, "Cookie": f"sid={sid}",},
     ) as resp:
-        return bs4.BeautifulSoup(await resp.text(), 'html.parser')
+        return bs4.BeautifulSoup(await resp.text(), "html.parser")
 
 
 def adapt_publications(soup) -> Generator[Publication, None, None]:
-    for card in soup.find(id='publications').parent.find_all(class_='nova-o-stack__item'):
-        a = card.find(itemprop='headline').find('a')
-        iden = a['href'].split('/')[-1].split('_')[0]
+    for card in soup.find(id="publications").parent.find_all(
+        class_="nova-o-stack__item"
+    ):
+        a = card.find(itemprop="headline").find("a")
+        iden = a["href"].split("/")[-1].split("_")[0]
         title = a.text
-        authors = [span.text for span in card.find_all(itemprop='name')]
+        authors = [span.text for span in card.find_all(itemprop="name")]
         yield Publication(
-            id=iden,
-            name=title,
-            authors=[Author(full_name=name) for name in authors]
+            id=iden, name=title, authors=[Author(full_name=name) for name in authors]
         )
 
 
 def adapt_citations(soup):
-    for item in soup.find_all(class_='nova-v-citation-item'):
-        a = item.find(class_='nova-v-publication-item__title').find('a')
-        iden = a['href'].split('/')[-1].split('_')[0]
+    for item in soup.find_all(class_="nova-v-citation-item"):
+        a = item.find(class_="nova-v-publication-item__title").find("a")
+        iden = a["href"].split("/")[-1].split("_")[0]
         title = a.text
 
         authors = []
-        author_list = item.find(class_='nova-v-publication-item__person-list')
-        for li in author_list.find_all('li'):
-            a = li.find('a')
-            authors.append(Author(
-                id=a['href'].split('/')[-1],
-                full_name=a.text
-            ))
+        author_list = item.find(class_="nova-v-publication-item__person-list")
+        for li in author_list.find_all("li"):
+            a = li.find("a")
+            authors.append(Author(id=a["href"].split("/")[-1], full_name=a.text))
 
-        abstract = item.find(class_='nova-v-publication-item__description')
+        abstract = item.find(class_="nova-v-publication-item__description")
         if abstract:
-            abstract = abstract.text.replace('\n', '')
+            abstract = abstract.text.replace("\n", "")
 
         yield Publication(
-            id=iden,
-            name=title,
-            authors=authors,
-            extra={
-                'abstract': abstract,
-            }
+            id=iden, name=title, authors=authors, extra={"abstract": abstract,}
         )
 
 
 def author_id_from_url(url):
     url = urllib.parse.urlparse(url)
-    assert url.netloc == 'www.researchgate.net'
-    parts = url.path.split('/')
-    assert parts[1] == 'profile'
+    assert url.netloc == "www.researchgate.net"
+    parts = url.path.split("/")
+    assert parts[1] == "profile"
     return parts[2]
+
 
 class Stage:
     @dataclass
@@ -119,12 +109,13 @@ class Stage:
         offset: int = 0
         cit_offset: int = 0
 
+
 class CrawlResearchGate(Task):
     Stage = Stage
 
     @classmethod
     def namespace(cls):
-        return 'researchgate'
+        return "researchgate"
 
     @classmethod
     def initial_stage(cls):
@@ -133,14 +124,13 @@ class CrawlResearchGate(Task):
     @classmethod
     def fields(cls):
         return {
-            'url':
-                'Navigate to <a href="https://www.researchgate.net/search">ResearchGate\'s '
-                'search</a> and search for your profile. Click on it when you find it and copy '
-                'the URL.'
+            "url": 'Navigate to <a href="https://www.researchgate.net/search">ResearchGate\'s '
+            "search</a> and search for your profile. Click on it when you find it and copy "
+            "the URL."
         }
 
     def set_field(self, key, value):
-        assert key == 'url'
+        assert key == "url"
         self._storage.user_author_id = author_id_from_url(value)
         self._storage.user_pub_ids = []
         self._due = 0
@@ -150,40 +140,30 @@ class CrawlResearchGate(Task):
             return Step(delay=24 * 60 * 60, stage=None)
 
         if isinstance(stage, Stage.FetchPublications):
-            _log.debug('running stage 0')
+            _log.debug("running stage 0")
             soup = await fetch_author(session, self._storage.user_author_id)
             self_publications = list(adapt_publications(soup))
 
             return Step(
-                delay=1,
-                stage=Stage.FetchToken(),
-                self_publications=self_publications,
+                delay=1, stage=Stage.FetchToken(), self_publications=self_publications,
             )
 
         elif isinstance(stage, Stage.FetchToken):
-            _log.debug('running stage 1')
+            _log.debug("running stage 1")
             rg_token, sid = await fetch_token_sid(session)
             return Step(
-                delay=10 * 60,
-                stage=Stage.FetchCitations(rg_token=rg_token, sid=sid),
+                delay=10 * 60, stage=Stage.FetchCitations(rg_token=rg_token, sid=sid),
             )
 
         elif isinstance(stage, Stage.FetchCitations):
             if stage.offset >= len(self._storage.user_pub_ids):
-                return Step(
-                    delay=24 * 60 * 60,
-                    stage=self.initial_stage(),
-                )
+                return Step(delay=24 * 60 * 60, stage=self.initial_stage(),)
 
-            _log.debug('running stage 2 at offset %d', stage.offset)
+            _log.debug("running stage 2 at offset %d", stage.offset)
             pub_id = self._storage.user_pub_ids[stage.offset]
 
             soup = await fetch_citations(
-                session,
-                stage.rg_token,
-                stage.sid,
-                pub_id,
-                stage.cit_offset
+                session, stage.rg_token, stage.sid, pub_id, stage.cit_offset
             )
 
             citations = list(adapt_citations(soup))
@@ -194,13 +174,15 @@ class CrawlResearchGate(Task):
                         rg_token=rg_token,
                         sid=sid,
                         offset=stage.offset,
-                        cit_offset=stage.cit_offset + len(citations)
+                        cit_offset=stage.cit_offset + len(citations),
                     ),
                     citations={pub_id: citations},
                 )
             else:
                 return Step(
                     delay=2 * 60,
-                    stage=Stage.FetchCitations(rg_token=rg_token, sid=sid, offset=stage.offset + 1),
+                    stage=Stage.FetchCitations(
+                        rg_token=rg_token, sid=sid, offset=stage.offset + 1
+                    ),
                     citations={pub_id: citations},
                 )

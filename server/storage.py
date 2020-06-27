@@ -13,7 +13,7 @@ def filename_for(identifier):
     # `identifier` may consist of invalid path characters such as '/', but the paths still need
     # to be unique. We can't use `base64` because paths are case insensitive on some systems so
     # there could be collisions. We just go on the safe side and use the sha256 sum.
-    return hashlib.sha256(identifier.encode('utf-8')).hexdigest()
+    return hashlib.sha256(identifier.encode("utf-8")).hexdigest()
 
 
 # What data we store is inherently tied to the storage itself so we put it here
@@ -30,19 +30,19 @@ class Author:
         if self.full_name:
             return self.full_name
 
-        first = self.first_name or ''
-        last = self.last_name or ''
-        full = f'{first} {last}'.strip()
+        first = self.first_name or ""
+        last = self.last_name or ""
+        full = f"{first} {last}".strip()
         if full:
             return full
 
-        raise ValueError('unidentifiable author')
+        raise ValueError("unidentifiable author")
 
     def unique_path_name(self) -> str:
         if self.id:
-            return f'author/{filename_for(self.id)}'
+            return f"author/{filename_for(self.id)}"
         else:
-            return f'author/uniden/{filename_for(self.name())}'
+            return f"author/uniden/{filename_for(self.name())}"
 
 
 @dataclass
@@ -52,42 +52,45 @@ class Publication:
     # TODO review how we're saving authors
     # TODO probably better saving paths (as references) here?
     authors: Optional[List[Author]] = None
-    cit_paths: Optional[List[str]] = None  # unique_path_name of publications citing this source
+    cit_paths: Optional[
+        List[str]
+    ] = None  # unique_path_name of publications citing this source
     extra: Optional[dict] = None
 
     def unique_path_name(self) -> str:
         if self.id:
-            return f'pub/{filename_for(self.id)}'
+            return f"pub/{filename_for(self.id)}"
         else:
-            return f'pub/uniden/{filename_for(self.name)}'
+            return f"pub/uniden/{filename_for(self.name)}"
+
 
 class Storage:
     # Class responsible for storing all information from various sources
     def __init__(self, root: Path):
         self._root = root
-        self._profile_file = root / 'profile.json'
+        self._profile_file = root / "profile.json"
         self._profile = {
-            'user-author-id': None,
-            'user-pub-ids': [],
+            "user-author-id": None,
+            "user-pub-ids": [],
         }
 
     @property
     def user_author_id(self):
         """Author identifier of the current user."""
-        return self._profile['user-author-id']
+        return self._profile["user-author-id"]
 
     @user_author_id.setter
     def user_author_id(self, value):
-        self._profile['user-author-id'] = value
+        self._profile["user-author-id"] = value
 
     @property
     def user_pub_ids(self):
         """Publication identifiers owned by the current user."""
-        return self._profile['user-pub-ids']
+        return self._profile["user-pub-ids"]
 
     @user_pub_ids.setter
     def user_pub_ids(self, value):
-        self._profile['user-pub-ids'] = value
+        self._profile["user-pub-ids"] = value
 
     def save_author(self, author: Author):
         path = self._root / author.unique_path_name()

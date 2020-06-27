@@ -26,77 +26,87 @@ async def fetch_author(session, author_id):
     # * facets/publication.json
     # * facets/publication/researcher/{author_id}/box.json
     async with session.get(
-            'https://app.dimensions.ai/panel/publication/author/preview.json',
-            params={'and_facet_researcher': author_id}
+        "https://app.dimensions.ai/panel/publication/author/preview.json",
+        params={"and_facet_researcher": author_id},
     ) as resp:
         return await resp.json()
 
+
 def adapt_authors(data) -> Generator[Author, None, None]:
-    for author in data['data']:
-        author = author['details']
+    for author in data["data"]:
+        author = author["details"]
         yield Author(
-            id=author['id'],
-            first_name=author['first_name'],
-            last_name=author['last_name'],
+            id=author["id"],
+            first_name=author["first_name"],
+            last_name=author["last_name"],
             extra={
-                'organization': author['current_org_name'],
-                'country': author['current_org_country'],
-            }
+                "organization": author["current_org_name"],
+                "country": author["current_org_country"],
+            },
         )
+
 
 async def fetch_publications(session, author_id, cursor):
     async with session.get(
-            'https://app.dimensions.ai/discover/publication/results.json',
-            params={'and_facet_researcher': author_id, 'cursor': cursor or '*'}
+        "https://app.dimensions.ai/discover/publication/results.json",
+        params={"and_facet_researcher": author_id, "cursor": cursor or "*"},
     ) as resp:
         return await resp.json()
 
+
 def adapt_publications(data) -> Generator[Publication, None, None]:
-    for pub in data['docs']:
+    for pub in data["docs"]:
         yield Publication(
-            id=pub['id'],
-            name=pub['title'],
-            authors=[Author(
-                # TODO researcher_dim_id seem to match with the names in the author list
-                full_name=author
-            ) for author in pub['author_list'].split(', ')]
+            id=pub["id"],
+            name=pub["title"],
+            authors=[
+                Author(
+                    # TODO researcher_dim_id seem to match with the names in the author list
+                    full_name=author
+                )
+                for author in pub["author_list"].split(", ")
+            ],
         )
+
 
 async def fetch_citations(session, pub_id, cursor):
     async with session.get(
-            'https://app.dimensions.ai/details/sources/publication/related/publication/cited-by.json',
-            params={'id': pub_id, 'cursor': cursor or '*'}
+        "https://app.dimensions.ai/details/sources/publication/related/publication/cited-by.json",
+        params={"id": pub_id, "cursor": cursor or "*"},
     ) as resp:
         return await resp.json()
 
+
 def adapt_citations(data) -> Generator[Publication, None, None]:
-    for pub in data['docs']:
-        first_page, last_page = map(int, pub['pages'].split('-'))
+    for pub in data["docs"]:
+        first_page, last_page = map(int, pub["pages"].split("-"))
         yield Publication(
-            id=pub['id'],
-            name=pub['title'],
-            authors=[Author(
-                full_name=author
-            ) for author in pub['author_list'].split(', ')],
+            id=pub["id"],
+            name=pub["title"],
+            authors=[
+                Author(full_name=author) for author in pub["author_list"].split(", ")
+            ],
             extra={
-                'editors': pub['editor_list'].split(', '),
-                'journal': pub['journal_title'],
-                'book': pub['book_title'],
-                'pdf': pub['linkout_oa'],
-                'publisher': pub['publisher_source'],
-                'doi': pub['doi'],
-                'first-page': first_page,
-                'last-page': last_page,
-                'year': pub['pub_year'],
-            }
+                "editors": pub["editor_list"].split(", "),
+                "journal": pub["journal_title"],
+                "book": pub["book_title"],
+                "pdf": pub["linkout_oa"],
+                "publisher": pub["publisher_source"],
+                "doi": pub["doi"],
+                "first-page": first_page,
+                "last-page": last_page,
+                "year": pub["pub_year"],
+            },
         )
+
 
 def author_id_from_url(url):
     url = urllib.parse.urlparse(url)
-    assert url.netloc == 'app.dimensions.ai'
-    assert url.path == '/discover/publication'
+    assert url.netloc == "app.dimensions.ai"
+    assert url.path == "/discover/publication"
     query = urllib.parse.parse_qs(url.query)
-    return query['and_facet_researcher'][0]
+    return query["and_facet_researcher"][0]
+
 
 class Stage:
     @dataclass
@@ -114,12 +124,13 @@ class Stage:
         offset: int = 0
         cursor: Optional[str] = None
 
+
 class CrawlDimensions(Task):
     Stage = Stage
 
     @classmethod
     def namespace(cls):
-        return 'dimensions'
+        return "dimensions"
 
     @classmethod
     def initial_stage(cls):
@@ -128,16 +139,15 @@ class CrawlDimensions(Task):
     @classmethod
     def fields(cls):
         return {
-            'url':
-                'Navigate to <a href="https://app.dimensions.ai/discover/publication">'
-                'Dimension\'s search</a> and search for publications with your name. Open one '
-                'of the publications and click on your name in the author list'
-                'search for publications with your name. Click on your name in the list of '
-                'authors of one of the publications, and copy that final URL.'
+            "url": 'Navigate to <a href="https://app.dimensions.ai/discover/publication">'
+            "Dimension's search</a> and search for publications with your name. Open one "
+            "of the publications and click on your name in the author list"
+            "search for publications with your name. Click on your name in the list of "
+            "authors of one of the publications, and copy that final URL."
         }
 
     def set_field(self, key, value):
-        assert key == 'url'
+        assert key == "url"
         self._storage.user_author_id = author_id_from_url(value)
         self._storage.user_pub_ids = []
         self._due = 0
@@ -147,19 +157,19 @@ class CrawlDimensions(Task):
             return Step(delay=24 * 60 * 60, stage=None)
 
         if isinstance(stage, Stage.FetchAuthors):
-            _log.debug('running stage 0')
+            _log.debug("running stage 0")
             data = await fetch_author(session, self._storage.user_author_id)
             authors = list(adapt_authors(data))
             return Step(
-                delay=10 * 60,
-                stage=Stage.FetchPublications(),
-                authors=authors,
+                delay=10 * 60, stage=Stage.FetchPublications(), authors=authors,
             )
 
         elif isinstance(stage, Stage.FetchPublications):
-            _log.debug('running stage 1')
-            data = await fetch_publications(session, self._storage.user_author_id, stage.cursor)
-            cursor = data['next_cursor']
+            _log.debug("running stage 1")
+            data = await fetch_publications(
+                session, self._storage.user_author_id, stage.cursor
+            )
+            cursor = data["next_cursor"]
             self_publications = list(adapt_publications(data))
 
             if cursor:
@@ -177,15 +187,12 @@ class CrawlDimensions(Task):
 
         elif isinstance(stage, Stage.FetchCitations):
             if stage.offset >= len(self._storage.user_pub_ids):
-                return Step(
-                    delay=24 * 60 * 60,
-                    stage=self.initial_stage(),
-                )
+                return Step(delay=24 * 60 * 60, stage=self.initial_stage(),)
 
             pub_id = self._storage.user_pub_ids[stage.offset]
 
             data = await fetch_citations(session, pub_id, stage.cursor)
-            cursor = data['next_cursor']
+            cursor = data["next_cursor"]
 
             citations = list(adapt_citations(data))
 
@@ -193,11 +200,11 @@ class CrawlDimensions(Task):
                 return Step(
                     delay=5 * 60,
                     stage=Stage.FetchCitations(offset=stage.offset, cursor=cursor),
-                    citations={pub_id: citations}
+                    citations={pub_id: citations},
                 )
             else:
                 return Step(
                     delay=10 * 60,
                     stage=Stage.FetchCitations(offset=stage.offset + 1),
-                    citations={pub_id: citations}
+                    citations={pub_id: citations},
                 )

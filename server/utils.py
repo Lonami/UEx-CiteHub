@@ -37,7 +37,7 @@ def locked(func):
 
 def try_load_json(data, path: Path):
     try:
-        with path.open(encoding='utf-8') as fd:
+        with path.open(encoding="utf-8") as fd:
             data.update(json.load(fd))
     except FileNotFoundError:
         pass
@@ -45,16 +45,17 @@ def try_load_json(data, path: Path):
 
 def save_json(data, path: Path):
     try:
-        with path.open('w', encoding='utf-8') as fd:
+        with path.open("w", encoding="utf-8") as fd:
             return json.dump(data, fd)
     except FileNotFoundError:  # ask for forgiveness, not permission
         path.parent.mkdir(parents=True)
-        with path.open('w', encoding='utf-8') as fd:
+        with path.open("w", encoding="utf-8") as fd:
             return json.dump(data, fd)
 
 
 class Heap:
     """Pythonic heap."""
+
     def __init__(self, iterable=()):
         self._heap = list(iterable)
         heapq.heapify(self._heap)

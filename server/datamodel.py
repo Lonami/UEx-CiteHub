@@ -35,7 +35,7 @@ class Comparable(abc.ABC):
     """
 
     @abc.abstractmethod
-    def similarity(self, other: 'Comparable') -> float:
+    def similarity(self, other: "Comparable") -> float:
         """
         Returns the similarity percentage between this item
         and another one as a real number between 0 and 1 inclusive.
@@ -48,13 +48,13 @@ class Source(Enum):
     """
 
     # https://scholar.google.com
-    GOOGLE_SCHOLAR = 'google_scholar'
+    GOOGLE_SCHOLAR = "google_scholar"
 
     # https://academic.microsoft.com
-    MICROSOFT_ACADEMICS = 'microsoft_academics'
+    MICROSOFT_ACADEMICS = "microsoft_academics"
 
     # https://dev.elsevier.com
-    SCOPUS = 'scopus'
+    SCOPUS = "scopus"
 
 
 class MergeType(Enum):
@@ -63,13 +63,13 @@ class MergeType(Enum):
     """
 
     # The merge was made automatically
-    AUTOMATIC = 'automatic'
+    AUTOMATIC = "automatic"
 
     # The merge was made manually
-    MANUAL = 'manual'
+    MANUAL = "manual"
 
     # An automatic merge was split manually
-    SPLIT = 'split'
+    SPLIT = "split"
 
 
 # Identifier type used by original data
@@ -88,7 +88,7 @@ class Author(Comparable):
     last_name: str
     aliases: List[str]
 
-    def similarity(self, other: 'Author') -> float:
+    def similarity(self, other: "Author") -> float:
         raise NotImplementedError
 
 
@@ -103,15 +103,17 @@ class Publication:
     source: Source
     title: str
     year: int
-    cited_by: Optional[List['Publication']]
+    cited_by: Optional[List["Publication"]]
 
-    def similarity(self, other: 'Publication') -> float:
+    def similarity(self, other: "Publication") -> float:
         shorter, longer = sorted(map(len, (self.title, other.title)))
         if (longer - shorter) < (longer * MAX_TITLE_LENGTH_DIFF_RATIO):
             return 0
 
-        title_score = WEIGHT_SIMILAR_TITLE * difflib.SequenceMatcher(
-            None, self.title, other.title).ratio()
+        title_score = (
+            WEIGHT_SIMILAR_TITLE
+            * difflib.SequenceMatcher(None, self.title, other.title).ratio()
+        )
 
         author_score = WEIGHT_SIMILAR_AUTHORS * self.author.similarity(other.author)
 
@@ -129,14 +131,10 @@ class Publication:
 
         cite_score = WEIGHT_SIMILAR_CITES * utils.clamp(
             utils.map_range(
-                similar_cites / most_cites,
-                0,
-                1,
-                0,
-                MAX_SIMILAR_CITES_RATIO
+                similar_cites / most_cites, 0, 1, 0, MAX_SIMILAR_CITES_RATIO
             ),
             0,
-            1
+            1,
         )
 
         score = sum((title_score, author_score, cite_score))
@@ -148,14 +146,14 @@ class Merge:
     """
     Represents a merge between two `Comparable` items.
     """
+
     left: Comparable
     kind: MergeType
     right: Comparable
 
 
 def merge_items(
-        items: Iterable[Comparable],
-        threshold: float = SIMILARITY_THRESHOLD,
+    items: Iterable[Comparable], threshold: float = SIMILARITY_THRESHOLD,
 ) -> Generator[Merge, None, None]:
     """
     Merges items from various sources into one.
