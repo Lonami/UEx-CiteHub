@@ -91,7 +91,7 @@ def _remove_enclosed(parts, sep, prefix, suffix):
 
 def adapt_citations(data) -> Generator[Publication, None, None]:
     citations = data["paperCitations"]
-    citations = citations.get("ieee", ()) + citations.get("nonIeee", ())
+    citations = citations.get("ieee", []) + citations.get("nonIeee", [])
     for cit in citations:
         iden = cit["links"].get("documentLink") or None
         if iden:
