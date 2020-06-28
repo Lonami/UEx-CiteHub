@@ -132,6 +132,8 @@ class Task(abc.ABC):
                 pub.cit_paths.append(cit.unique_path_name())
                 self._storage.save_pub(cit)
 
+            self._storage.save_pub(pub)
+
         # We're trying our best to only advance the stage atomically if stepping completes
         # without errors, however we could be interrupted at any time while saving the data
         # produced by this step to storage. There's not much we can do about this.
