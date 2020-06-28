@@ -83,9 +83,9 @@ def adapt_citations(data) -> Generator[Publication, None, None]:
                 Author(full_name=author) for author in pub["author_list"].split(", ")
             ],
             extra={
-                "editors": pub["editor_list"].split(", "),
+                "editors": pub.get("editor_list", "").split(", ") or None,
                 "journal": pub["journal_title"],
-                "book": pub["book_title"],
+                "book": pub.get("book_title"),
                 "pdf": pub["linkout_oa"],
                 "publisher": pub["publisher_source"],
                 "doi": pub["doi"],
