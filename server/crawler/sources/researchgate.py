@@ -165,8 +165,8 @@ class CrawlResearchGate(Task):
                 return Step(
                     delay=10 * 60,
                     stage=Stage.FetchCitations(
-                        rg_token=rg_token,
-                        sid=sid,
+                        rg_token=stage.rg_token,
+                        sid=stage.sid,
                         offset=stage.offset,
                         cit_offset=stage.cit_offset + len(citations),
                     ),
@@ -176,7 +176,7 @@ class CrawlResearchGate(Task):
                 return Step(
                     delay=2 * 60,
                     stage=Stage.FetchCitations(
-                        rg_token=rg_token, sid=sid, offset=stage.offset + 1
+                        rg_token=stage.rg_token, sid=stage.sid, offset=stage.offset + 1
                     ),
                     citations={pub_id: citations},
                 )
