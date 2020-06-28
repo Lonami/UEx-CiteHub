@@ -2,14 +2,11 @@
 https://ieeexplore.ieee.org/
 """
 import urllib.parse
-import logging
 from typing import Generator
 from ...storage import Author, Publication
 from ..task import Task
 from dataclasses import dataclass
 from ..step import Step
-
-_log = logging.getLogger(__name__)
 
 
 async def fetch_author(session, author_id):
@@ -209,7 +206,6 @@ class CrawlExplore(Task):
         # TODO not sure how offsets work here, there's so little data for the author we care in this site so can't test
 
         if isinstance(stage, Stage.FetchPublications):
-            _log.debug("running stage 0")
             data = await fetch_author(session, self._storage.user_author_id)
             self_publications = list(adapt_publications(data))
             return Step(
@@ -222,8 +218,6 @@ class CrawlExplore(Task):
         elif isinstance(stage, Stage.FetchCitations):
             if stage.offset >= len(self._storage.user_pub_ids):
                 return Step(delay=24 * 60 * 60, stage=self.initial_stage(),)
-
-            _log.debug("running stage 1 at %d", stage.offset)
 
             pub_id = self._storage.user_pub_ids[stage.offset]
             data = await fetch_citations(session, pub_id)

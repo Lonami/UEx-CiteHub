@@ -1,6 +1,5 @@
 import asyncio
 import codecs
-import logging
 import random
 import re
 import urllib.parse
@@ -36,7 +35,6 @@ _URL_PUBLICATION = "/citations?view_op=view_citation&hl=en&citation_for_view={}"
 _USER_RE = re.compile(r"user=([^&]+)")
 _CITATION_RE = re.compile(r"citation_for_view=([\w-]*:[\w-]*)")
 
-_log = logging.getLogger(__name__)
 
 if _PAGE_CACHE:
     # copy-paste of non-cache version
@@ -371,7 +369,6 @@ class CrawlScholar(Task):
             return Step(delay=FULL_DELAY, stage=None)
 
         if isinstance(stage, Stage.FetchFirst):
-            _log.debug("running stage 0")
             soup = await _get_page(
                 session, _URL_AUTHOR.format(self._storage.user_author_id)
             )
@@ -393,7 +390,6 @@ class CrawlScholar(Task):
                 )
 
         elif isinstance(stage, Stage.FetchPublications):
-            _log.debug("running stage 1 at offset %d", stage.offset)
             soup = await _get_page(
                 session,
                 _URL_AUTHOR.format(self._storage.user_author_id)
@@ -420,7 +416,6 @@ class CrawlScholar(Task):
             if stage.offset >= len(self._storage.user_pub_ids):
                 return Step(delay=FULL_DELAY, stage=self.initial_stage(),)
 
-            _log.debug("running stage 2 at offset %d", stage.offset)
             soup = await _get_page(
                 session,
                 _URL_PUBLICATION.format(self._storage.user_pub_ids[stage.offset]),
@@ -441,7 +436,6 @@ class CrawlScholar(Task):
                 )
 
         elif isinstance(stage, Stage.FetchCitations):
-            _log.debug("running stage 3 at offset %s", stage.cit_url)
             soup = await _get_page(session, url=stage.cit_url)
             citations, cit_url = parse_citations(soup)
 

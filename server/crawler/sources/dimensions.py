@@ -10,15 +10,11 @@ Both the cookie and X-CSRF-Token headers may also need to be necessary, with ref
     https://app.dimensions.ai/discover/publication?and_facet_researcher=ur.<id>.<n>
 """
 import urllib.parse
-import logging
 from typing import Generator, Tuple, Optional
 from ...storage import Author, Publication
 from ..task import Task
 from dataclasses import dataclass
 from ..step import Step
-
-
-_log = logging.getLogger(__name__)
 
 
 async def fetch_author(session, author_id):
@@ -157,7 +153,6 @@ class CrawlDimensions(Task):
             return Step(delay=24 * 60 * 60, stage=None)
 
         if isinstance(stage, Stage.FetchAuthors):
-            _log.debug("running stage 0")
             data = await fetch_author(session, self._storage.user_author_id)
             authors = list(adapt_authors(data))
             return Step(
@@ -165,7 +160,6 @@ class CrawlDimensions(Task):
             )
 
         elif isinstance(stage, Stage.FetchPublications):
-            _log.debug("running stage 1")
             data = await fetch_publications(
                 session, self._storage.user_author_id, stage.cursor
             )

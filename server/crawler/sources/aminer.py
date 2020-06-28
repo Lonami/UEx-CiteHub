@@ -226,7 +226,6 @@ class CrawlArnetMiner(Task):
         miner = ArnetMiner(session)
 
         if isinstance(stage, Stage.FetchPublications):
-            _log.debug("running stage 0 at offset %d", stage.offset)
             data = await miner.search_publications(
                 self._storage.user_author_id, stage.offset
             )
@@ -245,10 +244,6 @@ class CrawlArnetMiner(Task):
             return Step(delay=delay, stage=stage, self_publications=self_publications,)
 
         elif isinstance(stage, Stage.FetchCitations):
-            _log.debug(
-                "running stage 1 at offset %d, %d", stage.pub_offset, stage.cit_offset
-            )
-
             if stage.pub_offset >= len(self._storage.user_pub_ids):
                 _log.debug("checked all publications")
                 return Step(delay=24 * 60 * 60, stage=self.initial_stage(),)

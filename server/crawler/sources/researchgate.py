@@ -10,7 +10,6 @@ The last part comes from a script in the main site.
 
 The HTML however is a mess, full of nested `<div>` and classes used for style purposes.
 """
-import logging
 import urllib.parse
 import bs4
 from typing import Generator
@@ -18,8 +17,6 @@ from ...storage import Author, Publication
 from ..task import Task
 from dataclasses import dataclass
 from ..step import Step
-
-_log = logging.getLogger(__name__)
 
 
 async def fetch_token_sid(session):
@@ -140,7 +137,6 @@ class CrawlResearchGate(Task):
             return Step(delay=24 * 60 * 60, stage=None)
 
         if isinstance(stage, Stage.FetchPublications):
-            _log.debug("running stage 0")
             soup = await fetch_author(session, self._storage.user_author_id)
             self_publications = list(adapt_publications(soup))
 
@@ -149,7 +145,6 @@ class CrawlResearchGate(Task):
             )
 
         elif isinstance(stage, Stage.FetchToken):
-            _log.debug("running stage 1")
             rg_token, sid = await fetch_token_sid(session)
             return Step(
                 delay=10 * 60, stage=Stage.FetchCitations(rg_token=rg_token, sid=sid),
@@ -159,7 +154,6 @@ class CrawlResearchGate(Task):
             if stage.offset >= len(self._storage.user_pub_ids):
                 return Step(delay=24 * 60 * 60, stage=self.initial_stage(),)
 
-            _log.debug("running stage 2 at offset %d", stage.offset)
             pub_id = self._storage.user_pub_ids[stage.offset]
 
             soup = await fetch_citations(

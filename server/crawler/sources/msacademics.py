@@ -15,15 +15,12 @@ Instead of using the API we're meant to use, we pretend to be the website and pe
 API calls as it. This is the most-reliable method.
 """
 import urllib.parse
-import logging
 from typing import Generator, List, Tuple
 
 from ...storage import Author, Publication
 from ..task import Task
 from dataclasses import dataclass
 from ..step import Step
-
-_log = logging.getLogger(__name__)
 
 
 def new_filtered_dict(**kwargs):
@@ -292,7 +289,6 @@ class CrawlAcademics(Task):
             return Step(delay=24 * 60 * 60, stage=None)
 
         if isinstance(stage, Stage.FetchQueries):
-            _log.debug("running stage 0 on %s", self._storage.user_author_id)
             data = await fetch_profile(session, self._storage.user_author_id)
             return Step(
                 delay=1,
@@ -305,12 +301,6 @@ class CrawlAcademics(Task):
             )
 
         elif isinstance(stage, Stage.FetchPublications):
-            _log.debug(
-                "running stage 1 on %s (%s), offset %d",
-                stage.pub_expr,
-                stage.query,
-                stage.offset,
-            )
             data = await fetch_publications(
                 session, stage.pub_expr, stage.query, stage.offset
             )
@@ -339,12 +329,6 @@ class CrawlAcademics(Task):
                 )
 
         elif isinstance(stage, Stage.FetchCitations):
-            _log.debug(
-                "running stage 2 on %s (%s), offset %d",
-                stage.cit_expr,
-                stage.query,
-                stage.offset,
-            )
             data = await fetch_citations(
                 session, stage.cit_expr, stage.query, stage.offset
             )

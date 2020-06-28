@@ -5,6 +5,7 @@ import json
 import logging
 import random
 import time
+import datetime
 from pathlib import Path
 
 from aiohttp import ClientSession
@@ -83,9 +84,12 @@ class Crawler:
                 if await self._wait_notify(delay):
                     continue  # tasks changed so we don't want to step on any
 
-                _log.debug("stepping task %s", task.namespace())
+                _log.debug(
+                    "stepping task %s at stage %s", task.namespace(), task._stage
+                )
                 await task.step(self._client_session)
                 task.save()
+                _log.debug("stepped task %s, next at %s", task.namespace(), task.due())
         except asyncio.CancelledError:
             raise
         except Exception:

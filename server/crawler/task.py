@@ -3,6 +3,8 @@ import asyncio
 import json
 import random
 import time
+import logging
+import datetime
 from typing import Mapping
 from dataclasses import asdict, is_dataclass
 from .step import Step
@@ -10,6 +12,7 @@ from ..storage import Storage
 
 
 DELAY_JITTER_PERCENT = 0.05
+_log = logging.getLogger(__name__)
 
 
 # TODO tasks are a bit messy because each stores its resume state in its own way
@@ -99,7 +102,12 @@ class Task(abc.ABC):
             json.dump(data, fd)
 
     async def step(self, session):
-        step = await self._step(self._stage, session)
+        try:
+            step = await self._step(self._stage, session)
+        except Exception:
+            _log.exception("unhandled exception stepping %s", self.namespace())
+            return
+
         if not isinstance(step, Step):
             raise TypeError(f"step returned invalid data: {step}")
 
@@ -135,6 +143,11 @@ class Task(abc.ABC):
 
     def remaining_delay(self):
         return self._due - asyncio.get_event_loop().time()
+
+    def due(self):
+        return datetime.datetime.now() + datetime.timedelta(
+            seconds=self.remaining_delay()
+        )
 
     def __lt__(self, other):
         return self._due < other._due
