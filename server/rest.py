@@ -28,7 +28,7 @@ async def get_publications(request):
                     "sources": sources,
                     "name": pub.name,
                     "authors": pub.authors,
-                    "cites": len(pub.cit_paths or ()),
+                    "cites": len(pub.cit_paths or ()),  # TODO also merge cites
                 }
             )
 
