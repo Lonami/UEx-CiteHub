@@ -17,38 +17,25 @@ def filename_for(identifier):
 
 
 # What data we store is inherently tied to the storage itself so we put it here
-# TODO perhaps one "name" should never be optional (same for publications' title)
 @dataclass
 class Author:
+    full_name: str
     id: Optional[str] = None
-    full_name: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     extra: Optional[dict] = None
-
-    def name(self):
-        if self.full_name:
-            return self.full_name
-
-        first = self.first_name or ""
-        last = self.last_name or ""
-        full = f"{first} {last}".strip()
-        if full:
-            return full
-
-        raise ValueError("unidentifiable author")
 
     def unique_path_name(self) -> str:
         if self.id:
             return f"author/{filename_for(self.id)}"
         else:
-            return f"author/uniden/{filename_for(self.name())}"
+            return f"author/uniden/{filename_for(self.full_name)}"
 
 
 @dataclass
 class Publication:
+    name: str
     id: Optional[str] = None
-    name: Optional[str] = None
     # TODO review how we're saving authors
     # TODO probably better saving paths (as references) here?
     authors: Optional[List[Author]] = None
@@ -106,7 +93,7 @@ class Storage:
         data = {}
         # TODO not ideal to make a pub instance just for the name
         if path is None:
-            path = Publication(id=iden).unique_path_name()
+            path = Publication(id=iden, name="").unique_path_name()
         path = self._root / path
         utils.try_load_json(data, path)
         # TODO the nested author doesn't get loaded correctly

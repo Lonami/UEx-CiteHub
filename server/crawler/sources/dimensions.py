@@ -31,10 +31,14 @@ async def fetch_author(session, author_id):
 def adapt_authors(data) -> Generator[Author, None, None]:
     for author in data["data"]:
         author = author["details"]
+        first = author["first_name"]
+        last = author["last_name"]
+
         yield Author(
             id=author["id"],
-            first_name=author["first_name"],
-            last_name=author["last_name"],
+            full_name=f"{first} {last}".strip(),
+            first_name=first,
+            last_name=last,
             extra={
                 "organization": author["current_org_name"],
                 "country": author["current_org_country"],
