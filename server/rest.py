@@ -10,6 +10,8 @@ from . import utils
 
 async def get_publications(request):
     result = []
+    cit_count = []
+
     used = set()
     merge_checker = request.app["merger"].checker()
     for source, storage in request.app["crawler"].storages().items():
@@ -23,14 +25,25 @@ async def get_publications(request):
                 sources.append(ns)
                 used.add(p)
 
+            cites = len(pub.cit_paths or ())  # TODO also merge cites
+            cit_count.append(cites)
             result.append(
                 {
                     "sources": sources,
                     "name": pub.name,
                     "authors": pub.authors,
-                    "cites": len(pub.cit_paths or ()),  # TODO also merge cites
+                    "cites": cites,
                 }
             )
+
+    # TODO return h-index
+    cit_count.sort(reverse=True)
+    _h_index = 0
+    for i, cc in enumerate(cit_count, start=1):
+        if cc >= i:
+            _h_index = i
+        else:
+            break
 
     return web.json_response(result)
 
