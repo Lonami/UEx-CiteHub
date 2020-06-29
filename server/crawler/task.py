@@ -125,6 +125,9 @@ class Task(abc.ABC):
             raise TypeError(f"step returned invalid data: {step}")
 
         # TODO do we need self author? we already know our id
+        # TODO we can probably have all data in memory and save it into a single-file
+        #      which should make it easier to avoid partial files. it's not a lot and
+        #      would save hundreds of reads when merging.
         if step.self_author:
             self._storage.save_author(step.self_author)
 
@@ -144,9 +147,13 @@ class Task(abc.ABC):
             if pub.cit_paths is None:
                 pub.cit_paths = []
 
+            cit_paths = set(pub.cit_paths)
+
             for cit in citations:
-                pub.cit_paths.append(cit.unique_path_name())
+                cit_paths.add(cit.unique_path_name())
                 self._storage.save_pub(cit)
+
+            pub.cit_paths = list(cit_paths)
 
             self._storage.save_pub(pub)
 
