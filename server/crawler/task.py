@@ -14,6 +14,7 @@ from ..storage import Storage
 DELAY_JITTER_PERCENT = 0.05
 _log = logging.getLogger(__name__)
 
+ERROR_DELAYS = [1, 10, 60, 10 * 60, 60 * 60, 24 * 60 * 60]
 
 # TODO tasks are a bit messy because each stores its resume state in its own way
 # ideally we'd have a rust-like enum to ensure that only the data we need is saved
@@ -37,6 +38,7 @@ class Task(abc.ABC):
             self._root
         )  # TODO maybe storage should have the task too?
         self._due = 0
+        self._error = 0
         self._stage = self.initial_stage()
 
     @classmethod
@@ -105,8 +107,19 @@ class Task(abc.ABC):
         try:
             step = await self._step(self._stage, session)
         except Exception:
-            _log.exception("unhandled exception stepping %s", self.namespace())
+            delay = ERROR_DELAYS[min(self._error, len(ERROR_DELAYS) - 1)]
+            self._error += 1
+            _log.exception(
+                "%d consecutive unhandled exception(s) stepping %s, delay for %ds",
+                self._error,
+                self.namespace(),
+                delay,
+            )
+
+            self._due = asyncio.get_event_loop().time() + delay
             return
+        else:
+            self._error = 0
 
         if not isinstance(step, Step):
             raise TypeError(f"step returned invalid data: {step}")
