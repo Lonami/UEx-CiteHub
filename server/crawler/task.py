@@ -131,10 +131,13 @@ class Task(abc.ABC):
         for author in step.authors:
             self._storage.save_author(author)
 
-        # TODO after a re-run we will be storing duplicate data
+        user_pub_ids = set(self._storage.user_pub_ids)
+
         for pub in step.self_publications:
-            self._storage.user_pub_ids.append(pub.id)
+            user_pub_ids.add(pub.id)
             self._storage.save_pub(pub)
+
+        self._storage.user_pub_ids = list(user_pub_ids)
 
         for cites_pub_id, citations in step.citations.items():
             pub = self._storage.load_pub(cites_pub_id)

@@ -35,7 +35,7 @@ class Author:
 @dataclass
 class Publication:
     name: str
-    id: Optional[str] = None
+    id: Optional[str] = None  # must be present for self publications
     # TODO review how we're saving authors
     # TODO probably better saving paths (as references) here?
     authors: Optional[List[Author]] = None
