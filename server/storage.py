@@ -101,10 +101,13 @@ class Storage:
         path = self._root / pub.unique_path_name()
         utils.save_json(asdict(pub), path)
 
-    def load_pub(self, iden) -> Publication:
+    def load_pub(self, iden=None, path=None) -> Publication:
+        assert iden is not None or path is not None
         data = {}
         # TODO not ideal to make a pub instance just for the name
-        path = self._root / Publication(id=iden).unique_path_name()
+        if path is None:
+            path = Publication(id=iden).unique_path_name()
+        path = self._root / path
         utils.try_load_json(data, path)
         # TODO the nested author doesn't get loaded correctly
         return Publication(**data)

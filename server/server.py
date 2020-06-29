@@ -12,6 +12,7 @@ from aiohttp import web
 
 from . import helpers, rest
 from .crawler import Crawler
+from .merger import Merger
 
 
 class Server:
@@ -25,10 +26,12 @@ class Server:
             pass
 
     async def _run(self):
+        root = Path(self._app["config"]["storage"]["root"])
         self._app["crawler"] = Crawler(
-            Path(self._app["config"]["storage"]["root"]),
-            enabled=self._app["config"]["storage"].getboolean("crawler"),
+            root, enabled=self._app["config"]["storage"].getboolean("crawler"),
         )
+
+        self._app["merger"] = Merger(root, self._app["crawler"].storages())
 
         # Have to do this inside a coroutine to keep `aiohttp` happy
         runner = web.AppRunner(
@@ -42,7 +45,7 @@ class Server:
         site = aiohttp.web_runner.TCPSite(runner)
 
         try:
-            async with self._app["crawler"]:
+            async with self._app["crawler"], self._app["merger"]:
                 await site.start()
                 print("Running on:", site.name)
                 while True:

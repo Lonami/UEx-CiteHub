@@ -42,3 +42,7 @@ export function save_sources(data) {
         body: JSON.stringify(data)
     });
 }
+
+export function force_merge() {
+    return fetch_json('/rest/force-merge', {method: 'POST'});
+}

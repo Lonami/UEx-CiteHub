@@ -5,6 +5,8 @@
     import ProfileSettings from './ProfileSettings.svelte';
     import Publications from './Publications.svelte';
 
+    import { force_merge } from './rest.js';
+
     let settings_open = false;
 
     function clicked_out_settings(event) {
@@ -64,6 +66,7 @@
 <ProfileInfo/>
 
 <button on:click={e => settings_open = true}>Settings</button>
+<button on:click={force_merge}>Force merge</button>
 
 <Publications/>
 

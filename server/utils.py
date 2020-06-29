@@ -43,6 +43,14 @@ def try_load_json(data, path: Path):
         pass
 
 
+def try_load_list(path: Path):
+    try:
+        with path.open(encoding="utf-8") as fd:
+            return json.load(fd)
+    except FileNotFoundError:
+        return []
+
+
 def save_json(data, path: Path):
     try:
         with path.open("w", encoding="utf-8") as fd:
