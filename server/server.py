@@ -109,12 +109,6 @@ def create_app():
     for option, value in config.items("logging.levels"):
         logging.getLogger(option).setLevel(level=helpers.get_log_level(value))
 
-    # Build svelte-based frontend application
-    logging.info("building frontend...")
-    ret = subprocess.run(["npm", "run", "build"], cwd=config["www"]["root"]).returncode
-    if ret != 0:
-        exit(ret)
-
     # Create the aiohttp-based backend server
     logging.info("creating aiohttp server...")
     app = web.Application()
