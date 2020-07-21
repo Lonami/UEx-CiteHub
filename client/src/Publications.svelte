@@ -20,7 +20,11 @@
 <div class="publications">
     {#await get_publications()}
         <p>Loading publications…</p>
-    {:then publications}
+    {:then result}
+        <h2>Metrics</h2>
+        <ul>
+            <li>h-index: <strong>{result.h_index}</strong></li>
+        </ul>
         <table>
             <thead>
                 <tr>
@@ -31,7 +35,7 @@
                 </tr>
             </thead>
             <tbody>
-                {#each publications as publication (publication.id)}
+                {#each result.publications as publication (publication.id)}
                     <Publication {publication}/>
                 {/each}
             </tbody>

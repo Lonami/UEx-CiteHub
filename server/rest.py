@@ -9,7 +9,7 @@ from . import utils
 
 
 async def get_publications(request):
-    result = []
+    publications = []
     cit_count = []
 
     used = set()
@@ -27,7 +27,7 @@ async def get_publications(request):
 
             cites = len(pub.cit_paths or ())  # TODO also merge cites
             cit_count.append(cites)
-            result.append(
+            publications.append(
                 {
                     "sources": sources,
                     "name": pub.name,
@@ -36,16 +36,15 @@ async def get_publications(request):
                 }
             )
 
-    # TODO return h-index
     cit_count.sort(reverse=True)
-    _h_index = 0
+    h_index = 0
     for i, cc in enumerate(cit_count, start=1):
         if cc >= i:
-            _h_index = i
+            h_index = i
         else:
             break
 
-    return web.json_response(result)
+    return web.json_response({"h_index": h_index, "publications": publications,})
 
 
 def get_sources(request):
