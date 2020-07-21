@@ -44,10 +44,14 @@ async def get_publications(request):
         else:
             break
 
+    # TODO include more indices (such as i10-index, h10, hx (articulos con x citas en forma grafico))
+    # maybe look something similar to bar graph by scholar
+
     return web.json_response({"h_index": h_index, "publications": publications,})
 
 
 def get_sources(request):
+    # TODO authentication
     return web.json_response(request.app["crawler"].get_source_fields())
 
 

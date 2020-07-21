@@ -26,9 +26,11 @@
             <li>h-index: <strong>{result.h_index}</strong></li>
         </ul>
         <table>
+            <!-- TODO Allow sorting -->
             <thead>
                 <tr>
                     <th>Source</th>
+                    <!-- TODO would be nice to link to the website and see the entry on the corresponding source -->
                     <th>Title</th>
                     <th>Cited by</th>
                     <!-- <th>Year</th> -->

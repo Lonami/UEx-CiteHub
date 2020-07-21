@@ -42,6 +42,7 @@ class Publication:
     cit_paths: Optional[
         List[str]
     ] = None  # unique_path_name of publications citing this source
+    # TODO year should be here
     extra: Optional[dict] = None
 
     def unique_path_name(self) -> str:
