@@ -2,6 +2,7 @@ import asyncio
 import codecs
 import random
 import re
+import logging
 import urllib.parse
 from typing import AsyncGenerator, Optional, List
 
@@ -12,6 +13,8 @@ from ...storage import Author, Publication
 from ..task import Task
 from dataclasses import dataclass
 from ..step import Step
+
+_log = logging.getLogger(__name__)
 
 _PAGE_CACHE = True  # for debugging purposes
 
@@ -134,7 +137,8 @@ def _analyze_basic_publication_soup(soup) -> Publication:
         id=iden,
         name=name,
         authors=[Author(full_name=author) for author in authors],
-        extra={"cite-count": cite_count, "year": year, "publisher": publisher,},
+        year=year,
+        extra={"cite-count": cite_count, "publisher": publisher,},
     )
 
 
@@ -222,6 +226,15 @@ def parse_author_profile_publications(soup) -> (List[Publication], bool):
     return publications, has_offset
 
 
+def _parse_year(date):
+    if date:
+        matches = re.findall(r"\d{4}", date.text)
+        if matches:
+            return int(matches[0])
+        else:
+            _log.warning("date had no year %s", date)
+
+
 def parse_publication(soup) -> (Publication, str):
     iden = soup.find("input", id="gsc_vcd_cid")["value"]
     title = soup.find("div", id="gsc_vcd_title").text
@@ -262,6 +275,7 @@ def parse_publication(soup) -> (Publication, str):
             id=iden,
             name=title,
             authors=[Author(full_name=author) for author in authors],
+            year=_parse_year(date),
             extra={
                 "name": title,
                 "authors": authors,

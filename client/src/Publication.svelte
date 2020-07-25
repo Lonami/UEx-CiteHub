@@ -66,5 +66,5 @@
             {publication.cites}
         {/if}
     </td>
-    <!-- <td class="year">{publication.year}</td> -->
+    <td class="year">{publication.year === null ? "No year available" : publication.year}</td>
 </tr>

@@ -11,12 +11,17 @@ The last part comes from a script in the main site.
 The HTML however is a mess, full of nested `<div>` and classes used for style purposes.
 """
 import urllib.parse
+import re
 import bs4
+import logging
 from typing import Generator
 from ...storage import Author, Publication
 from ..task import Task
 from dataclasses import dataclass
 from ..step import Step
+
+
+_log = logging.getLogger(__name__)
 
 
 async def fetch_token_sid(session):
@@ -47,6 +52,16 @@ async def fetch_citations(session, rg_token, sid, pub_id, offset):
         return bs4.BeautifulSoup(await resp.text(), "html.parser")
 
 
+def _find_year(soup):
+    date = soup.find(class_="nova-v-publication-item__meta-data-item")
+    if date:
+        matches = re.findall(r"\d{4}", date.text)
+        if matches:
+            return int(matches[0])
+        else:
+            _log.warning("found meta with no date %s", date)
+
+
 def adapt_publications(soup) -> Generator[Publication, None, None]:
     for card in soup.find(id="publications").parent.find_all(
         class_="nova-o-stack__item"
@@ -55,8 +70,12 @@ def adapt_publications(soup) -> Generator[Publication, None, None]:
         iden = a["href"].split("/")[-1].split("_")[0]
         title = a.text
         authors = [span.text for span in card.find_all(itemprop="name")]
+        year = _find_year(card)
         yield Publication(
-            id=iden, name=title, authors=[Author(full_name=name) for name in authors]
+            id=iden,
+            name=title,
+            authors=[Author(full_name=name) for name in authors],
+            year=year,
         )
 
 
@@ -72,12 +91,18 @@ def adapt_citations(soup):
             a = li.find("a")
             authors.append(Author(id=a["href"].split("/")[-1], full_name=a.text))
 
+        year = _find_year(item)
+
         abstract = item.find(class_="nova-v-publication-item__description")
         if abstract:
             abstract = abstract.text.replace("\n", "")
 
         yield Publication(
-            id=iden, name=title, authors=authors, extra={"abstract": abstract,}
+            id=iden,
+            name=title,
+            authors=authors,
+            year=year,
+            extra={"abstract": abstract,},
         )
 
 

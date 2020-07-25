@@ -39,10 +39,10 @@ class Publication:
     # TODO review how we're saving authors
     # TODO probably better saving paths (as references) here?
     authors: Optional[List[Author]] = None
+    year: Optional[int] = None
     cit_paths: Optional[
         List[str]
     ] = None  # unique_path_name of publications citing this source
-    # TODO year should be here
     extra: Optional[dict] = None
 
     def unique_path_name(self) -> str:

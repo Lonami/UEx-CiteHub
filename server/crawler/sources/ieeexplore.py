@@ -59,9 +59,9 @@ def adapt_publications(data) -> Generator[Publication, None, None]:
                 )
                 for author in paper["authors"]
             ],
+            year=paper["publicationYear"],
             extra={
                 "doi": paper["doi"],
-                "year": paper["publicationYear"],
                 "volume": paper.get("volume"),
                 "issue": paper.get("issue"),
                 "first-page": paper["startPage"],
@@ -151,13 +151,13 @@ def adapt_citations(data) -> Generator[Publication, None, None]:
             id=iden,
             name=title,
             authors=[Author(full_name=name) for name in author_names],
+            year=year,
             extra={
                 "google-scholar-url": cit.get("googleScholarLink"),
                 "start-page": start_page,
                 "end-page": end_page,
                 "issue": issue,
                 "volume": volume,
-                "year": year,
                 "location": location,
             },
         )

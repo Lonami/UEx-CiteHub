@@ -27,12 +27,14 @@ async def get_publications(request):
 
             cites = len(pub.cit_paths or ())  # TODO also merge cites
             cit_count.append(cites)
+            # TODO this should be smarter and if anyhas missing data (e.g. year) use a different source
             publications.append(
                 {
                     "sources": sources,
                     "name": pub.name,
                     "authors": pub.authors,
                     "cites": cites,
+                    "year": pub.year,
                 }
             )
 

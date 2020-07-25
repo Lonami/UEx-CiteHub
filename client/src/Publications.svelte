@@ -61,7 +61,7 @@
                     <!-- TODO would be nice to link to the website and see the entry on the corresponding source -->
                     <th on:click={_ => set_sort("name")}>Title</th>
                     <th on:click={_ => set_sort("cites")}>Cited by</th>
-                    <!-- <th>Year</th> -->
+                    <th on:click={_ => set_sort("year")}>Year</th>
                 </tr>
             </thead>
             <tbody>

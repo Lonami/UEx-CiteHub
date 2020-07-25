@@ -16,15 +16,20 @@ API calls as it. This is the most-reliable method.
 """
 import urllib.parse
 from typing import Generator, List, Tuple
+import logging
 
 from ...storage import Author, Publication
 from ..task import Task
 from dataclasses import dataclass
+from datetime import datetime
 from ..step import Step
 
 
 def new_filtered_dict(**kwargs):
     return {k: v for k, v in kwargs.items() if v is not None}
+
+
+_log = logging.getLogger(__name__)
 
 
 class Academics:
@@ -192,6 +197,15 @@ def _adapt_paper(paper) -> Publication:
     publisher = paper["v"]
     _sources = paper["s"]  # source type 0 and 1 has link
     authors = paper["a"]
+
+    try:
+        year = datetime.fromisoformat(publisher["publishedDate"]).year
+    except ValueError:
+        year = None
+        _log.warning(
+            "publisher date is not in iso format: %s", publisher["publishedDate"]
+        )
+
     return Publication(
         id=str(paper["id"]),
         name=paper["dn"],
@@ -202,6 +216,7 @@ def _adapt_paper(paper) -> Publication:
             )
             for author in authors
         ],
+        year=year,
         extra={
             "description": paper["d"],
             "publisher": publisher.get(

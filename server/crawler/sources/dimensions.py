@@ -66,6 +66,7 @@ def adapt_publications(data) -> Generator[Publication, None, None]:
                 )
                 for author in pub["author_list"].split(", ")
             ],
+            year=pub["pub_year"],
         )
 
 
@@ -86,6 +87,7 @@ def adapt_citations(data) -> Generator[Publication, None, None]:
             authors=[
                 Author(full_name=author) for author in pub["author_list"].split(", ")
             ],
+            year=pub["pub_year"],
             extra={
                 "editors": pub.get("editor_list", "").split(", ") or None,
                 "journal": pub["journal_title"],
@@ -95,7 +97,6 @@ def adapt_citations(data) -> Generator[Publication, None, None]:
                 "doi": pub["doi"],
                 "first-page": first_page,
                 "last-page": last_page,
-                "year": pub["pub_year"],
             },
         )
 

@@ -165,6 +165,7 @@ def adapt_publications(data) -> Generator[Publication, None, None]:
                 )
                 for author in pub["authors"]
             ],
+            year=pub["year"] or None,  # may be 0, we prefer None
             extra={
                 "cit-count": pub["num_citation"],  # used later
                 "doi": pub.get("doi"),
