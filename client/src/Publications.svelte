@@ -4,28 +4,20 @@
     import { get_publications } from './rest.js';
 
     let sort_by = {key: null, rev: false};
-
-    // bit ugly because we want sorting to work with async; probably there is a better way
-    let pubs;
-    let publications = null;
-    async function load_publications() {
-        pubs = await get_publications();
-        set_sort(null);
-    }
-
     function set_sort(key) {
         if (sort_by.key === key) {
             sort_by.rev = !sort_by.rev;
         } else {
-            sort_by.key = key;
-            sort_by.rev = false;
+            sort_by = {key: key, rev: false};
         }
+    }
 
+    $: sort_list = function(items) {
         if (sort_by.key === null) {
-            publications = pubs.publications;
+            return items;
         } else {
             let value = sort_by.rev ? -1 : 1;
-            let sorted = pubs.publications.slice();
+            let sorted = items.slice();
             sorted.sort(function(a, b) {
                 if (a[sort_by.key] < b[sort_by.key]) {
                     return -value;
@@ -35,7 +27,7 @@
                     return 0;
                 }
             });
-            publications = sorted;
+            return sorted;
         }
     }
 </script>
@@ -55,12 +47,12 @@
 </style>
 
 <div class="publications">
-    {#await load_publications()}
+    {#await get_publications()}
         <p>Loading publications…</p>
-    {:then _}
+    {:then result}
         <h2>Metrics</h2>
         <ul>
-            <li>h-index: <strong>{pubs.h_index}</strong></li>
+            <li>h-index: <strong>{result.h_index}</strong></li>
         </ul>
         <table>
             <thead>
@@ -73,7 +65,7 @@
                 </tr>
             </thead>
             <tbody>
-                {#each publications as publication}
+                {#each sort_list(result.publications) as publication}
                     <Publication {publication}/>
                 {/each}
             </tbody>
