@@ -150,7 +150,8 @@ def author_id_from_url(url):
 
 def adapt_publications(data) -> Generator[Publication, None, None]:
     def maybe_int(value):
-        return int(value) if value else None
+        # Sometimes we get "ArticleNo.22" in the page which is not a page number
+        return int(value) if value and value.isdigit() else None
 
     # If it has 0 keyValues then the items key will be missing
     for pub in data.get("items", ()):
