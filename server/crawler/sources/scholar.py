@@ -395,14 +395,14 @@ class CrawlScholar(Task):
                 return Step(
                     delay=PROFILE_DELAY,
                     stage=Stage.FetchPublications(),
-                    self_author=self_author,
+                    authors=[self_author],
                     self_publications=self_publications,
                 )
             else:
                 return Step(
                     delay=PUBLICATION_DELAY,
                     stage=Stage.FetchSinglePublication(),
-                    self_author=self_author,
+                    authors=[self_author],
                     self_publications=self_publications,
                 )
 

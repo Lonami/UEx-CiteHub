@@ -11,10 +11,7 @@ class Step:
     # Next stage
     stage: Any
 
-    # Information about the current user's `Author`
-    self_author: Optional[Author] = None
-
-    # Any other `Author` found along the way
+    # Any `Author` found along the way
     authors: List[Author] = field(default_factory=list)
 
     # Publications made by the current user
