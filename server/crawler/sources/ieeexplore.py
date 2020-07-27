@@ -20,6 +20,10 @@ async def fetch_author(session, author_id):
             "returnFacets": ["ALL"],
             "returnType": "SEARCH",
             "matchPubs": True,
+            "rowsPerPage": 75,
+            # This site hardly has any information so 75 publications will most likely fetch them all.
+            # However if the need comes, pagination can be added by increasing the pageNumber field.
+            # "pageNumber": 1,
         },
         headers={"Referer": f"https://ieeexplore.ieee.org/author/{author_id}",},
     ) as resp:
@@ -208,8 +212,6 @@ class CrawlExplore(Task):
     async def _step(self, stage, session) -> Step:
         if not self._storage.user_author_id:
             return Step(delay=24 * 60 * 60, stage=None)
-
-        # TODO not sure how offsets work here, there's so little data for the author we care in this site so can't test
 
         if isinstance(stage, Stage.FetchPublications):
             data = await fetch_author(session, self._storage.user_author_id)
