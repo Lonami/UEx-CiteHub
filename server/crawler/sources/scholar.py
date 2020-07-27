@@ -124,7 +124,7 @@ def _analyze_basic_publication_soup(soup) -> Publication:
     authors = [author.strip() for author in authors.text.split(",")]
     publisher = publisher.text
 
-    ref = soup.find("a", "gsc_a_at")["data-href"]
+    ref = _HOST + soup.find("a", "gsc_a_at")["data-href"]
     iden = _CITATION_RE.search(ref).group(1)
     cite_count = soup.find(class_="gsc_a_ac").text
     if cite_count:
