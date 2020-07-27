@@ -21,7 +21,6 @@
 
 {#if source.ref !== null}
     <a href={source.ref}>
-        <!-- TODO not a fan of this duplication but svelte does not allow half-closed tags because it has to build the dom tree -->
         {#if source_info[source.key] === undefined}
             <p>{source}</p>
         {:else}
@@ -29,6 +28,7 @@
         {/if}
     </a>
 {:else}
+    <!-- We're duplicating a bit of code but it's not so much that we need another component yet. -->
     {#if source_info[source.key] === undefined}
         <p>{source}</p>
     {:else}
