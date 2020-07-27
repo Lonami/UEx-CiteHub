@@ -74,8 +74,6 @@ class Merger:
             _log.exception("unhandled exception in crawl task")
 
     async def _merge(self):
-        # TODO this is going to block for a while but if we run in a thread we'd want some form of
-        #      locking in storage for thread safety. unsure if yielding every so often has consequences
         result = []
         for ((ns_a, storage_a), (ns_b, storage_b)) in itertools.combinations(
             self._storages.items(), 2
@@ -115,6 +113,9 @@ class Merger:
                             )
                         )
 
+                # Yielding control to the event loop for every publication pair seems to do
+                # a pretty good job, and the web server is able to respond while we do this
+                # even if it's pretty CPU intensive (although IO loads may play a big role).
                 await asyncio.sleep(0)
 
         utils.save_json(list(map(asdict, result)), self._root / "merges.json")
