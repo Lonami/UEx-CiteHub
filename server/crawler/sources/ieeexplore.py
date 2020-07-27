@@ -44,6 +44,10 @@ def author_id_from_url(url):
     return parts[2]
 
 
+def _pub_ref(pub_id):
+    return f"https://ieeexplore.ieee.org/document/{pub_id}"
+
+
 def adapt_publications(data) -> Generator[Publication, None, None]:
     for paper in data["records"]:
         yield Publication(
@@ -60,6 +64,7 @@ def adapt_publications(data) -> Generator[Publication, None, None]:
                 for author in paper["authors"]
             ],
             year=paper["publicationYear"],
+            ref=_pub_ref(paper["articleNumber"]),
             extra={
                 "doi": paper["doi"],
                 "volume": paper.get("volume"),
@@ -152,6 +157,7 @@ def adapt_citations(data) -> Generator[Publication, None, None]:
             name=title,
             authors=[Author(full_name=name) for name in author_names],
             year=year,
+            ref=cit["links"].get("documentLink") or None,
             extra={
                 "google-scholar-url": cit.get("googleScholarLink"),
                 "start-page": start_page,

@@ -154,8 +154,9 @@ def adapt_publications(data) -> Generator[Publication, None, None]:
 
     # If it has 0 keyValues then the items key will be missing
     for pub in data.get("items", ()):
+        pub_id = pub["id"]
         yield Publication(
-            id=pub["id"],
+            id=pub_id,
             name=pub["title"],
             authors=[
                 Author(
@@ -166,6 +167,7 @@ def adapt_publications(data) -> Generator[Publication, None, None]:
                 for author in pub["authors"]
             ],
             year=pub["year"] or None,  # may be 0, we prefer None
+            ref=f"https://www.aminer.cn/pub/{pub_id}",
             extra={
                 "cit-count": pub["num_citation"],  # used later
                 "doi": pub.get("doi"),

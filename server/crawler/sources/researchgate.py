@@ -76,6 +76,7 @@ def adapt_publications(soup) -> Generator[Publication, None, None]:
             name=title,
             authors=[Author(full_name=name) for name in authors],
             year=year,
+            ref=a["href"],
         )
 
 
@@ -102,6 +103,7 @@ def adapt_citations(soup):
             name=title,
             authors=authors,
             year=year,
+            ref=a["href"],
             extra={"abstract": abstract,},
         )
 

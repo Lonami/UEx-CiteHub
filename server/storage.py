@@ -40,6 +40,7 @@ class Publication:
     # TODO probably better saving paths (as references) here?
     authors: Optional[List[Author]] = None
     year: Optional[int] = None
+    ref: Optional[str] = None
     cit_paths: Optional[
         List[str]
     ] = None  # unique_path_name of publications citing this source

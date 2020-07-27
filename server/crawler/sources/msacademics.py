@@ -206,8 +206,9 @@ def _adapt_paper(paper) -> Publication:
             "publisher date is not in iso format: %s", publisher["publishedDate"]
         )
 
+    pub_id = str(paper["id"])
     return Publication(
-        id=str(paper["id"]),
+        id=pub_id,
         name=paper["dn"],
         authors=[
             Author(
@@ -217,6 +218,7 @@ def _adapt_paper(paper) -> Publication:
             for author in authors
         ],
         year=year,
+        ref=f"https://academic.microsoft.com/paper/{pub_id}",
         extra={
             "description": paper["d"],
             "publisher": publisher.get(

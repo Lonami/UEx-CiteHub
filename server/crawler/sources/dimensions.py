@@ -54,6 +54,10 @@ async def fetch_publications(session, author_id, cursor):
         return await resp.json()
 
 
+def _pub_ref(pub_id):
+    return f"https://app.dimensions.ai/details/publication/{pub_id}"
+
+
 def adapt_publications(data) -> Generator[Publication, None, None]:
     for pub in data["docs"]:
         yield Publication(
@@ -67,6 +71,7 @@ def adapt_publications(data) -> Generator[Publication, None, None]:
                 for author in pub["author_list"].split(", ")
             ],
             year=pub["pub_year"],
+            ref=_pub_ref(pub["id"]),
         )
 
 
@@ -88,6 +93,7 @@ def adapt_citations(data) -> Generator[Publication, None, None]:
                 Author(full_name=author) for author in pub["author_list"].split(", ")
             ],
             year=pub["pub_year"],
+            ref=_pub_ref(pub["id"]),
             extra={
                 "editors": pub.get("editor_list", "").split(", ") or None,
                 "journal": pub["journal_title"],

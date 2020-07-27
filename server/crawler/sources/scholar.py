@@ -124,7 +124,8 @@ def _analyze_basic_publication_soup(soup) -> Publication:
     authors = [author.strip() for author in authors.text.split(",")]
     publisher = publisher.text
 
-    iden = _CITATION_RE.search(soup.find("a", "gsc_a_at")["data-href"]).group(1)
+    ref = soup.find("a", "gsc_a_at")["data-href"]
+    iden = _CITATION_RE.search(ref).group(1)
     cite_count = soup.find(class_="gsc_a_ac").text
     if cite_count:
         cite_count = int(cite_count)
@@ -138,6 +139,7 @@ def _analyze_basic_publication_soup(soup) -> Publication:
         name=name,
         authors=[Author(full_name=author) for author in authors],
         year=year,
+        ref=ref,
         extra={"cite-count": cite_count, "publisher": publisher,},
     )
 
@@ -276,6 +278,7 @@ def parse_publication(soup) -> (Publication, str):
             name=title,
             authors=[Author(full_name=author) for author in authors],
             year=_parse_year(date),
+            ref=f"https://scholar.google.com/citations?view_op=view_citation&citation_for_view={iden}",
             extra={
                 "name": title,
                 "authors": authors,
@@ -297,12 +300,15 @@ def parse_citations(soup) -> (List[Publication], Optional[str]):
     for row in soup.find_all("div", "gs_or"):
         a_val = row.find(class_="gs_a").text.split("-")[0]
         abstract = row.find(class_="gs_rs")
+        title = row.find("h3")
+        title_ref = title.find("a")
         citations.append(
             Publication(
-                name=row.find("h3").text,
+                name=title.text,
                 authors=[
                     Author(full_name=author.strip()) for author in a_val.split(",")
                 ],
+                ref=title_ref["href"] if title_ref else None,
                 extra={"abstract": abstract.text if abstract else None},
             )
         )
