@@ -145,8 +145,6 @@ def _analyze_basic_publication_soup(soup) -> Publication:
 
 
 def parse_author_profile(soup) -> (Author, List[Publication], bool):
-    # TODO maybe remove most parsing if we don't care about the data.
-    #      it's in the git history if we ever need it anyway.
     iden = soup.find("div", id="gsc_md_fol-bdy").find("input", {"name": "user"})[
         "value"
     ]
@@ -379,7 +377,6 @@ class CrawlScholar(Task):
 
     def set_field(self, key, value):
         assert key == "url"
-        # TODO url changes should adjust the task storage
         self._storage.user_author_id = author_id_from_url(value)
         self._storage.user_pub_ids = []
         self._due = 0

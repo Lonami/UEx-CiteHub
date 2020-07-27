@@ -68,7 +68,6 @@ class Task(abc.ABC):
         # Should be stateless (no internal mutation or mutation of the input stage).
         # This way do our best to achieve atomicy and only if things go well.
         # It can rely on the storage to contain the data from previous successful steps.
-        # TODO probably don't call step if there's no author id in storage
         # TODO perhaps step and the data it produces should be separate?
         raise NotImplementedError
 

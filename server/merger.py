@@ -14,7 +14,8 @@ _log = logging.getLogger(__name__)
 
 
 def similarity(a, b, _words_re=re.compile(r"\w+")):
-    # TODO this function can obviously apply other heuristics
+    # This function can obviously apply more complex heuristics, but in reality this works
+    # good enough and it's nearly as simple as we can get while tolerating some differences.
     title_a = _words_re.findall(a.name.lower())
     title_b = _words_re.findall(b.name.lower())
     if title_a == title_b:

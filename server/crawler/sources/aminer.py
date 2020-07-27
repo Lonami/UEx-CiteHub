@@ -184,7 +184,6 @@ def adapt_publications(data) -> Generator[Publication, None, None]:
         )
 
 
-# TODO more standard way to deal with stages and avoid manual stage checks, same for debug logs
 class Stage:
     @dataclass
     class FetchPublications:
@@ -198,7 +197,6 @@ class Stage:
         cit_offset: int = 0
 
 
-# TODO this is very similar to msacademics, maybe we can reuse
 class CrawlArnetMiner(Task):
     Stage = Stage
 
