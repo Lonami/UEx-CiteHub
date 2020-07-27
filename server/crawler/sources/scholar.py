@@ -228,7 +228,7 @@ def parse_author_profile_publications(soup) -> (List[Publication], bool):
 
 def _parse_year(date):
     if date:
-        matches = re.findall(r"\d{4}", date.text)
+        matches = re.findall(r"\d{4}", date)
         if matches:
             return int(matches[0])
         else:
