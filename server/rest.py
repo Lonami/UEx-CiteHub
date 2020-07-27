@@ -19,10 +19,12 @@ async def get_publications(request):
             pub = storage.load_pub(pub_id)
             path = pub.unique_path_name()
 
-            sources = [source]
+            sources = [{"key": source, "ref": pub.ref,}]
             used.add(path)
             for ns, p in merge_checker.get_related(source, path):
-                sources.append(ns)
+                sources.append(
+                    {"key": ns, "ref": p.ref,}
+                )
                 used.add(p)
 
             cites = len(pub.cit_paths or ())  # TODO also merge cites
