@@ -123,6 +123,10 @@ class Task(abc.ABC):
         if not isinstance(step, Step):
             raise TypeError(f"step returned invalid data: {step}")
 
+        # Tasks can embed the authors where author paths should belong for convenience.
+        # Address that here before saving anything so everything has the right types.
+        step.fix_authors()
+
         # TODO we can probably have all data in memory and save it into a single-file
         #      which should make it easier to avoid partial files. it's not a lot and
         #      would save hundreds of reads when merging.

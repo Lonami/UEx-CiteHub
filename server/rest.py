@@ -37,7 +37,7 @@ async def get_publications(request):
                 {
                     "sources": sources,
                     "name": pub.name,
-                    "authors": pub.authors,
+                    "authors": [storage.load_author(a) for a in pub.authors],
                     "cites": cites,
                     "year": pub.year,
                 }

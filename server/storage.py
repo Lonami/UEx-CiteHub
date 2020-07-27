@@ -36,9 +36,7 @@ class Author:
 class Publication:
     name: str
     id: Optional[str] = None  # must be present for self publications
-    # TODO review how we're saving authors
-    # TODO probably better saving paths (as references) here?
-    authors: Optional[List[Author]] = None
+    authors: Optional[List[str]] = None
     year: Optional[int] = None
     ref: Optional[str] = None
     cit_paths: Optional[
@@ -98,8 +96,13 @@ class Storage:
             path = Publication(id=iden, name="").unique_path_name()
         path = self._root / path
         utils.try_load_json(data, path)
-        # TODO the nested author doesn't get loaded correctly
         return Publication(**data)
+
+    def load_author(self, path) -> Author:
+        data = {}
+        path = self._root / path
+        utils.try_load_json(data, path)
+        return Author(**data)
 
     def load(self):
         utils.try_load_json(self._profile, self._profile_file)
