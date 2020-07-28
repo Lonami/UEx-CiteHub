@@ -155,7 +155,7 @@ class CrawlResearchGate(Task):
 
     def set_field(self, key, value):
         assert key == "url", f"invalid key {key}"
-        self._storage.user_author_id = author_id_from_url(value)
+        self._storage.user_author_id = None if not value else author_id_from_url(value)
         self._storage.user_pub_ids = []
         self._due = 0
 
