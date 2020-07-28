@@ -15,7 +15,14 @@ async function save_details() {
         for (let [key, value] of new FormData(source_form).entries()) {
             data[key] = value;
         }
-        await save_sources(data);
+        let result = await save_sources(data);
+        if (result.errors.length !== 0) {
+            let error = 'Some errors occured:';
+            for (let e of result.errors) {
+                error += `\nFailed to update ${e.namespace}.${e.key}: ${e.reason}`;
+            }
+            last_error = {message: error};
+        }
     } catch (e) {
         last_error = e;
     } finally {

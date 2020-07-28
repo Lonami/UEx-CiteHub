@@ -134,9 +134,9 @@ class Academics:
 
 def author_id_from_url(url):
     url = urllib.parse.urlparse(url)
-    assert url.netloc == "academic.microsoft.com"
+    assert url.netloc == "academic.microsoft.com", f"unexpected domain {url.netloc}"
     parts = url.path.split("/")
-    assert parts[1] == "profile"
+    assert parts[1] == "profile", f"unexpected path {parts[1]}"
     return parts[2]
 
 
@@ -296,7 +296,7 @@ class CrawlAcademics(Task):
         }
 
     def set_field(self, key, value):
-        assert key == "url"
+        assert key == "url", f"invalid key {key}"
         self._storage.user_author_id = author_id_from_url(value)
         self._storage.user_pub_ids = []
         self._due = 0

@@ -109,8 +109,8 @@ def adapt_citations(data) -> Generator[Publication, None, None]:
 
 def author_id_from_url(url):
     url = urllib.parse.urlparse(url)
-    assert url.netloc == "app.dimensions.ai"
-    assert url.path == "/discover/publication"
+    assert url.netloc == "app.dimensions.ai", f"unexpected domain {url.netloc}"
+    assert url.path == "/discover/publication", f"unexpected path {url.path}"
     query = urllib.parse.parse_qs(url.query)
     return query["and_facet_researcher"][0]
 
@@ -154,7 +154,7 @@ class CrawlDimensions(Task):
         }
 
     def set_field(self, key, value):
-        assert key == "url"
+        assert key == "url", f"invalid key {key}"
         self._storage.user_author_id = author_id_from_url(value)
         self._storage.user_pub_ids = []
         self._due = 0

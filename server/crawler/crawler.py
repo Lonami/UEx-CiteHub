@@ -122,6 +122,7 @@ class Crawler:
         if not self._enabled:
             return
 
+        errors = []
         for key, value in sources.items():
             namespace, key = key.split(".")
             value = value.strip()
@@ -131,14 +132,22 @@ class Crawler:
                 continue  # nothing to do
 
             _log.info("updating source %s to %s", key, value)
-            self._sources[namespace][key] = value
 
-            # It is possible that we update the sources and not tasks, but very unlikely
-            # TODO we do zero error handling but the urls may be wrong here and fail
-            self._tasks.set_field(namespace, key, value)
+            # It is possible that we update the tasks and not the sources due
+            # to a race-condition, but very unlikely.
+            try:
+                self._tasks.set_field(namespace, key, value)
+            except Exception as e:
+                _log.exception("failed to set %s.%s", namespace, key)
+                errors.append(
+                    {"namespace": namespace, "key": key, "reason": str(e),}
+                )
+            else:
+                self._sources[namespace][key] = value
 
         self.save()
         self._crawl_notify.set()
+        return {"errors": errors}
 
     def save(self):
         utils.save_json(self._sources, self._sources_file)

@@ -322,8 +322,8 @@ def parse_citations(soup) -> (List[Publication], Optional[str]):
 
 def author_id_from_url(url):
     url = urllib.parse.urlparse(url)
-    assert url.netloc == "scholar.google.com"
-    assert url.path == "/citations"
+    assert url.netloc == "scholar.google.com", f"unexpected domain {url.netloc}"
+    assert url.path == "/citations", f"unexpected path {url.path}"
     query = urllib.parse.parse_qs(url.query)
     return query["user"][0]
 
@@ -376,7 +376,7 @@ class CrawlScholar(Task):
         }
 
     def set_field(self, key, value):
-        assert key == "url"
+        assert key == "url", f"invalid key {key}"
         self._storage.user_author_id = author_id_from_url(value)
         self._storage.user_pub_ids = []
         self._due = 0

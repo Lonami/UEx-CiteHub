@@ -42,9 +42,9 @@ async def fetch_citations(session, document_id):
 
 def author_id_from_url(url):
     url = urllib.parse.urlparse(url)
-    assert url.netloc == "ieeexplore.ieee.org"
+    assert url.netloc == "ieeexplore.ieee.org", f"unexpected domain {url.netloc}"
     parts = url.path.split("/")
-    assert parts[1] == "author"
+    assert parts[1] == "author", f"unexpected path {parts[1]}"
     return parts[2]
 
 
@@ -204,7 +204,7 @@ class CrawlExplore(Task):
         }
 
     def set_field(self, key, value):
-        assert key == "url"
+        assert key == "url", f"invalid key {key}"
         self._storage.user_author_id = author_id_from_url(value)
         self._storage.user_pub_ids = []
         self._due = 0

@@ -110,9 +110,9 @@ def adapt_citations(soup):
 
 def author_id_from_url(url):
     url = urllib.parse.urlparse(url)
-    assert url.netloc == "www.researchgate.net"
+    assert url.netloc == "www.researchgate.net", f"unexpected domain {url.netloc}"
     parts = url.path.split("/")
-    assert parts[1] == "profile"
+    assert parts[1] == "profile", f"unexpected path {parts[1]}"
     return parts[2]
 
 
@@ -154,7 +154,7 @@ class CrawlResearchGate(Task):
         }
 
     def set_field(self, key, value):
-        assert key == "url"
+        assert key == "url", f"invalid key {key}"
         self._storage.user_author_id = author_id_from_url(value)
         self._storage.user_pub_ids = []
         self._due = 0

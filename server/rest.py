@@ -67,8 +67,8 @@ def get_sources(request):
 
 @utils.locked
 async def save_sources(request):
-    request.app["crawler"].update_source_fields(await request.json())
-    return web.json_response({})
+    result = request.app["crawler"].update_source_fields(await request.json())
+    return web.json_response(result)
 
 
 async def force_merge(request):
