@@ -8,6 +8,9 @@ from aiohttp import web
 from . import utils
 
 
+MAX_I_INDEX = 20
+
+
 async def get_publications(request):
     publications = []
     cit_count = []
@@ -47,6 +50,8 @@ async def get_publications(request):
             )
 
     cit_count.sort(reverse=True)
+
+    # Largest number "h" such that "h" publications have "h" or more citations.
     h_index = 0
     for i, cc in enumerate(cit_count, start=1):
         if cc >= i:
@@ -54,10 +59,39 @@ async def get_publications(request):
         else:
             break
 
-    # TODO include more indices (such as i10-index, h10, hx (articulos con x citas en forma grafico))
-    # maybe look something similar to bar graph by scholar
+    # Number of publications with at least # citations (this list starts at 1).
+    i_indices = [0] * MAX_I_INDEX
+    for cc in cit_count:
+        if cc != 0:
+            i_indices[min(cc, MAX_I_INDEX) - 1] += 1
 
-    return web.json_response({"h_index": h_index, "publications": publications,})
+    # All the subsequent amounts have at least as many as the ones before.
+    for i in range(1, MAX_I_INDEX):
+        i_indices[i] += i_indices[i - 1]
+
+    # Largest number "g" such that "g" articles have "g²" or more citations in total.
+    g_index = 0
+    g_sum = 0
+    for i, cc in enumerate(cit_count, start=1):
+        g_sum += cc
+        if g_sum >= i ** 2:
+            g_index = i
+        else:
+            break
+
+    # e² = sum[j in 1..h](cit_j - h)
+    e_index = (sum(cit_count[:h_index]) - h_index ** 2) ** 0.5
+
+    # TODO include more indices (h10, hx (articulos con x citas en forma grafico))
+    return web.json_response(
+        {
+            "e_index": e_index,
+            "g_index": g_index,
+            "h_index": h_index,
+            "i_indices": i_indices,
+            "publications": publications,
+        }
+    )
 
 
 def get_sources(request):

@@ -52,6 +52,8 @@
     {:then result}
         <h2>Metrics</h2>
         <ul>
+            <li>e-index: <strong title={result.e_index}>{result.e_index.toFixed(2)}</strong></li>
+            <li>g-index: <strong>{result.g_index}</strong></li>
             <li>h-index: <strong>{result.h_index}</strong></li>
         </ul>
         <table>
