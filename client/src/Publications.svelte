@@ -1,5 +1,6 @@
 <script>
     import Publication from './Publication.svelte';
+    import Chart from './Chart.svelte';
 
     import { get_publications } from './rest.js';
 
@@ -30,6 +31,11 @@
             return sorted;
         }
     }
+
+    function explain_i_index(context) {
+        let have = context.value !== '1' ? 's have' : 'has';
+        return `${context.value} publication${have} ${context.label} or more citation`;
+    }
 </script>
 
 <style>
@@ -55,6 +61,11 @@
             <li>e-index: <strong title={result.e_index}>{result.e_index.toFixed(2)}</strong></li>
             <li>g-index: <strong>{result.g_index}</strong></li>
             <li>h-index: <strong>{result.h_index}</strong></li>
+            <Chart
+                dataset_label="i-index" data={result.i_indices}
+                x_label='Minimum citation count'
+                y_label='Publication count'
+                explanation_fn={explain_i_index} />
         </ul>
         <table>
             <thead>

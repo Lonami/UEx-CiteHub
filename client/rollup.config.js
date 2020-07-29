@@ -2,13 +2,19 @@ import svelte from 'rollup-plugin-svelte';
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import livereload from 'rollup-plugin-livereload';
-import { terser } from 'rollup-plugin-terser';
+//import { terser } from 'rollup-plugin-terser';
 
 const production = !process.env.ROLLUP_WATCH;
 
 export default {
+	// TODO figure out how to exclude moment from chart.js
+	//external: ['moment'],
 	input: 'src/main.js',
 	output: {
+		globals: {
+			// disable time features from chart.js
+			//'moment': 'moment',
+		},
 		sourcemap: true,
 		format: 'iife',
 		name: 'app',
@@ -46,7 +52,8 @@ export default {
 
 		// If we're building for production (npm run build
 		// instead of npm run dev), minify
-		production && terser()
+		// TODO re-enable after done developing; maybe change this file a bit
+		//production && terser()
 	],
 	watch: {
 		clearScreen: false
