@@ -1,6 +1,7 @@
 import itertools
 import uuid
 import json
+import statistics
 from pathlib import Path
 
 from aiohttp import web
@@ -14,6 +15,8 @@ MAX_I_INDEX = 20
 async def get_publications(request):
     publications = []
     cit_count = []
+    author_count = []
+    stats = {}
 
     used = set()
     merge_checker = request.app["merger"].checker()
@@ -33,8 +36,10 @@ async def get_publications(request):
                 sources.append({"key": ns, "ref": storages[ns].load_pub(path=p).ref})
                 used.add(p)
 
-            cites = len(pub.cit_paths or ())  # TODO also merge cites
+            # TODO also merge cites and other stats like author count
+            cites = len(pub.cit_paths or ())
             cit_count.append(cites)
+            author_count.append(len(pub.authors))
             # TODO this should be smarter and if anyhas missing data (e.g. year) use a different source
             publications.append(
                 {
@@ -82,12 +87,16 @@ async def get_publications(request):
     # e² = sum[j in 1..h](cit_j - h)
     e_index = (sum(cit_count[:h_index]) - h_index ** 2) ** 0.5
 
+    stats["avg_author_count"] = statistics.mean(author_count)
+    stats["pub_count"] = len(publications)
+
     return web.json_response(
         {
             "e_index": e_index,
             "g_index": g_index,
             "h_index": h_index,
             "i_indices": i_indices,
+            "stats": stats,
             "publications": publications,
         }
     )
