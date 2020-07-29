@@ -5,7 +5,7 @@
 
     function title_case(string) {
         return string.replace(
-            /[\w']+/g,
+            /[A-Za-zÀ-ÖØ-öø-ÿ_']+/g,
             function(match) {
                 return match.charAt(0).toUpperCase() + match.slice(1).toLowerCase();
             }
