@@ -65,9 +65,9 @@ async def get_publications(request):
         if cc != 0:
             i_indices[min(cc, MAX_I_INDEX) - 1] += 1
 
-    # All the subsequent amounts have at least as many as the ones before.
-    for i in range(1, MAX_I_INDEX):
-        i_indices[i] += i_indices[i - 1]
+    # `i` or more cites also count in `i - 1` tally since `i > i - 1`.
+    for i in reversed(range(1, MAX_I_INDEX)):
+        i_indices[i - 1] += i_indices[i]
 
     # Largest number "g" such that "g" articles have "g²" or more citations in total.
     g_index = 0
