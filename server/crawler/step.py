@@ -43,7 +43,6 @@ class Step:
 
 
 # TODO would be interesting to have self-citations (in which cites you're an author too)
-# TODO capitalize first letter of names for consistency
 # TODO show total count of articles (maybe per-source too)
 # TODO cites per year graph would be nice (along with hx)
 

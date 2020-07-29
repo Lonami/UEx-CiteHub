@@ -2,6 +2,15 @@
     import SourceIcon from './SourceIcon.svelte';
 
     export let publication;
+
+    function title_case(string) {
+        return string.replace(
+            /[\w']+/g,
+            function(match) {
+                return match.charAt(0).toUpperCase() + match.slice(1).toLowerCase();
+            }
+        );
+    }
 </script>
 
 <style>
@@ -51,10 +60,10 @@
         <p class="name">{publication.name}</p>
         <p class="authors">
             {#each publication.authors.slice(0, -1) as author}
-                {author.full_name}{", "}
+                {title_case(author.full_name)}{", "}
             {/each}
             {#if publication.authors.length > 0}
-                {publication.authors[publication.authors.length - 1].full_name}
+                {title_case(publication.authors[publication.authors.length - 1].full_name)}
             {/if}
         </p>
         <!-- <p class="publisher">{publication.publisher}</p> -->
