@@ -15,6 +15,23 @@ from .crawler import Crawler
 from .merger import Merger
 
 
+def serve_index(request):
+    return web.FileResponse(
+        os.path.join(request.app["config"]["www"]["root"], "public/index.html")
+    )
+
+
+APP_ROUTES = [
+    web.get("/", serve_index),
+    web.get("/register", serve_index),
+    web.get("/login", serve_index),
+    web.get("/metrics", serve_index),
+    web.get("/publications", serve_index),
+    web.get("/settings", serve_index),
+    web.get("/logout", serve_index),
+]
+
+
 class Server:
     def __init__(self, app):
         self._app = app
@@ -117,7 +134,7 @@ def create_app():
     # Define routes
     app.router.add_routes(
         [
-            web.get("/", lambda r: web.HTTPSeeOther("/index.html")),
+            *APP_ROUTES,
             *rest.ROUTES,
             web.static("/", os.path.join(config["www"]["root"], "public")),
         ]

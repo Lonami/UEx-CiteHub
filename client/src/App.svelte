@@ -3,6 +3,8 @@
 
     import ProfileSettings from './ProfileSettings.svelte';
     import Publications from './Publications.svelte';
+    import Register from './Register.svelte';
+    import Navigation from './Navigation.svelte';
 
     import { force_merge } from './rest.js';
 
@@ -61,14 +63,22 @@
 }
 </style>
 
-<h1>UEx-CiteHub</h1>
+<Navigation/>
 
 <button on:click={e => settings_open = true}>Settings</button>
 <button on:click={force_merge}>Force merge</button>
 
-<Publications/>
-
-{#if settings_open}
+{#if window.location.pathname === '/'}
+    <p>Welcome…</p>
+{:else if window.location.pathname === '/register'}
+    <p>Register…</p>
+{:else if window.location.pathname === '/login'}
+    <p>Login…</p>
+{:else if window.location.pathname === '/metrics'}
+    <p>Metrics…</p>
+{:else if window.location.pathname === '/publications'}
+    <Publications/>
+{:else if window.location.pathname === '/settings'}
     <div class="settings" on:click={clicked_out_settings} transition:fade={{duration: 100}}>
         <div>
             <button type="button" class="close" on:click={e => settings_open = false}>
@@ -80,4 +90,9 @@
             <ProfileSettings/>
         </div>
     </div>
+{:else if window.location.pathname === '/logout'}
+    <p>Logging out…</p>
+{:else}
+    <h2>404</h2>
+    <p>No such page exists at {window.location.pathname}</p>
 {/if}
