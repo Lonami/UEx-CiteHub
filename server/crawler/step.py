@@ -42,5 +42,4 @@ class Step:
                         cit.authors[i] = author.unique_path_name()
 
 
-# TODO would be interesting to have self-citations (in which cites you're an author too)
 # TODO cites per year graph would be nice (along with hx)
