@@ -3,7 +3,12 @@ import functools
 import heapq
 import itertools
 import json
+import hashlib
+import os
 from pathlib import Path
+
+
+PASSWORD_HASH_ITERATIONS = 100_000
 
 
 def pairwise(iterable):
@@ -59,6 +64,19 @@ def save_json(data, path: Path):
         path.parent.mkdir(parents=True)
         with path.open("w", encoding="utf-8") as fd:
             return json.dump(data, fd)
+
+
+def hash_user_pass(password, salt=None):
+    if salt is None:
+        salt = os.urandom(16)
+
+    # https://nakedsecurity.sophos.com/2013/11/20/serious-security-how-to-store-your-users-passwords-safely/
+    return (
+        salt,
+        hashlib.pbkdf2_hmac(
+            "sha256", password.encode("utf-8"), salt, PASSWORD_HASH_ITERATIONS
+        ),
+    )
 
 
 class Heap:

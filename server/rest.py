@@ -118,9 +118,29 @@ async def force_merge(request):
     return web.json_response({"ok": ok})
 
 
+def register_user(request):
+    pass
+
+
+def login_user(request):
+    pass
+
+
+def logout_user(request):
+    pass
+
+
+def delete_user(request):
+    pass
+
+
 ROUTES = [
     web.get("/rest/publications", get_publications),
     web.get("/rest/sources", get_sources),
     web.post("/rest/sources", save_sources),
     web.post("/rest/force-merge", force_merge),
+    web.post("/rest/user/register", register_user),
+    web.post("/rest/user/login", login_user),
+    web.post("/rest/user/logout", logout_user),
+    web.post("/rest/user/delete", delete_user),
 ]
