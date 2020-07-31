@@ -1,7 +1,6 @@
 <script>
     import { fade } from 'svelte/transition';
 
-    import ProfileInfo from './ProfileInfo.svelte';
     import ProfileSettings from './ProfileSettings.svelte';
     import Publications from './Publications.svelte';
 
@@ -63,7 +62,6 @@
 </style>
 
 <h1>UEx-CiteHub</h1>
-<ProfileInfo/>
 
 <button on:click={e => settings_open = true}>Settings</button>
 <button on:click={force_merge}>Force merge</button>
