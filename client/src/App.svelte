@@ -3,7 +3,8 @@
 
     import ProfileSettings from './ProfileSettings.svelte';
     import Publications from './Publications.svelte';
-    import Register from './Register.svelte';
+    import Login from './Login.svelte';
+    import Logout from './Logout.svelte';
     import Navigation from './Navigation.svelte';
 
     import { force_merge } from './rest.js';
@@ -71,9 +72,9 @@
 {#if window.location.pathname === '/'}
     <p>Welcome…</p>
 {:else if window.location.pathname === '/register'}
-    <p>Register…</p>
+    <Login register={true}/>
 {:else if window.location.pathname === '/login'}
-    <p>Login…</p>
+    <Login register={false}/>
 {:else if window.location.pathname === '/metrics'}
     <p>Metrics…</p>
 {:else if window.location.pathname === '/publications'}
@@ -91,7 +92,7 @@
         </div>
     </div>
 {:else if window.location.pathname === '/logout'}
-    <p>Logging out…</p>
+    <Logout/>
 {:else}
     <h2>404</h2>
     <p>No such page exists at {window.location.pathname}</p>

@@ -5,6 +5,7 @@ import itertools
 import json
 import hashlib
 import os
+import base64
 from pathlib import Path
 
 
@@ -69,13 +70,17 @@ def save_json(data, path: Path):
 def hash_user_pass(password, salt=None):
     if salt is None:
         salt = os.urandom(16)
+    else:
+        salt = base64.b64decode(salt)
 
     # https://nakedsecurity.sophos.com/2013/11/20/serious-security-how-to-store-your-users-passwords-safely/
     return (
-        salt,
-        hashlib.pbkdf2_hmac(
-            "sha256", password.encode("utf-8"), salt, PASSWORD_HASH_ITERATIONS
-        ),
+        base64.b64encode(salt).decode("ascii"),
+        base64.b64encode(
+            hashlib.pbkdf2_hmac(
+                "sha256", password.encode("utf-8"), salt, PASSWORD_HASH_ITERATIONS
+            )
+        ).decode("ascii"),
     )
 
 

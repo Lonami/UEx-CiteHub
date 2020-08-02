@@ -13,6 +13,7 @@ from aiohttp import web
 from . import helpers, rest
 from .crawler import Crawler
 from .merger import Merger
+from .users import Users
 
 
 def serve_index(request):
@@ -44,6 +45,9 @@ class Server:
 
     async def _run(self):
         root = Path(self._app["config"]["storage"]["root"])
+        self._app["users"] = Users(root)
+
+        # TODO there will need to be a crawler and merger per user..
         self._app["crawler"] = Crawler(
             root, enabled=self._app["config"]["storage"].getboolean("crawler"),
         )

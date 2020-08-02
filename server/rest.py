@@ -118,16 +118,22 @@ async def force_merge(request):
     return web.json_response({"ok": ok})
 
 
-def register_user(request):
-    pass
+async def register_user(request):
+    details = await request.json()
+    token = request.app["users"].register(details["username"], details["password"])
+    return web.json_response(token)
 
 
-def login_user(request):
-    pass
+async def login_user(request):
+    details = await request.json()
+    token = request.app["users"].login(details["username"], details["password"])
+    return web.json_response(token)
 
 
 def logout_user(request):
-    pass
+    token = request.headers["Authorization"]
+    result = request.app["users"].logout(token)
+    return web.json_response(result)
 
 
 def delete_user(request):
