@@ -81,7 +81,7 @@ class Users:
         if not user:
             return False
 
-        del self._users[user]
+        self._users[user]["token"] = None
         self._save()
         return True
 
