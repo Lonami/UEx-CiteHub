@@ -3,7 +3,14 @@
 
     let token;
 	const unsubscribe = user_token.subscribe(value => {
-		token = value;
+        token = value;
+        if (window.location.pathname === '/') {
+            if (token === null) {
+                window.location.replace('/login');
+            } else {
+                window.location.replace('/metrics');
+            }
+        }
 	});
 </script>
 

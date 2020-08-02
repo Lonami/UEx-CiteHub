@@ -1,6 +1,6 @@
 <script>
 import { onMount } from 'svelte';
-import { get_sources, save_sources } from './rest.js';
+import { get_sources, save_sources, force_merge } from './rest.js';
 
 let source_form;
 let submit_button;
@@ -38,6 +38,8 @@ async function save_details() {
 {#if last_error !== null}
     <p>An error occured: {last_error.message}</p>
 {/if}
+
+<button on:click={force_merge}>Force merge</button>
 
 {#await get_sources()}
     <p>Loading external source fields…</p>
