@@ -63,12 +63,20 @@ class Server:
         )
 
         await runner.setup()
-        site = aiohttp.web_runner.TCPSite(runner)
+        sites = [
+            aiohttp.web_runner.TCPSite(runner),
+            aiohttp.web_runner.UnixSite(
+                runner, self._app["config"]["www"]["unix_socket_path"]
+            ),
+        ]
 
         try:
             async with self._app["crawler"], self._app["merger"]:
-                await site.start()
-                print("Running on:", site.name)
+                print("Running on:")
+                for site in sites:
+                    await site.start()
+                    print("*", site.name)
+
                 while True:
                     await asyncio.sleep(60 * 60)
         except KeyboardInterrupt:
