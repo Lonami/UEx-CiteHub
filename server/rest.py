@@ -120,12 +120,15 @@ async def force_merge(request):
 
 async def register_user(request):
     details = await request.json()
+    request.app["auth"].check_whitelist(details["username"])
+    request.app["auth"].apply_rate_limit(request)
     token = request.app["users"].register(details["username"], details["password"])
     return web.json_response(token)
 
 
 async def login_user(request):
     details = await request.json()
+    request.app["auth"].apply_rate_limit(request)
     token = request.app["users"].login(details["username"], details["password"])
     return web.json_response(token)
 

@@ -84,6 +84,24 @@ def hash_user_pass(password, salt=None):
     )
 
 
+def parse_delay(delay):
+    if not delay:
+        return 0
+
+    delay = delay.lower()
+
+    if delay.endswith("s"):
+        return int(delay[:-1])
+    if delay.endswith("m"):
+        return 60 * int(delay[:-1])
+    if delay.endswith("h"):
+        return 60 * 60 * int(delay[:-1])
+    if delay.endswith("d"):
+        return 24 * 60 * 60 * int(delay[:-1])
+
+    return int(delay)
+
+
 class Heap:
     """Pythonic heap."""
 

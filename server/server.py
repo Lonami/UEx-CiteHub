@@ -15,6 +15,7 @@ from . import helpers, rest
 from .crawler import Crawler
 from .merger import Merger
 from .users import Users
+from .auth import Auth
 
 
 def serve_index(request):
@@ -48,6 +49,10 @@ class Server:
         cfg = self._app["config"]
         root = Path(cfg["storage"]["root"])
         self._app["users"] = Users(root)
+        self._app["auth"] = Auth(
+            fail_retry_delay=cfg["auth"].get("fail_retry_delay"),
+            csv_whitelist=cfg["auth"].get("whitelist"),
+        )
 
         # TODO there will need to be a crawler and merger per user..
         self._app["crawler"] = Crawler(
