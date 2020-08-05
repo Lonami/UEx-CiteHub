@@ -4,6 +4,7 @@ import logging
 import os
 import subprocess
 import sys
+import shutil
 
 from pathlib import Path
 
@@ -76,6 +77,11 @@ class Server:
                 for site in sites:
                     await site.start()
                     print("*", site.name)
+
+                user, group = self._app["config"]["www"]["chown_unix_socket"].split(":")
+                shutil.chown(
+                    self._app["config"]["www"]["unix_socket_path"], user, group
+                )
 
                 while True:
                     await asyncio.sleep(60 * 60)
