@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 import shutil
+import stat
 
 from pathlib import Path
 
@@ -84,6 +85,7 @@ class Server:
 
                 user, group = cfg["www"]["chown_unix_socket"].split(":")
                 shutil.chown(cfg["www"]["unix_socket_path"], user, group)
+                os.chmod(cfg["www"]["unix_socket_path"], stat.S_IRGRP | stat.S_IWGRP)
 
                 while True:
                     await asyncio.sleep(60 * 60)
