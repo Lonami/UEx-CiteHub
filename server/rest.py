@@ -87,7 +87,7 @@ async def get_publications(request):
     # e² = sum[j in 1..h](cit_j - h)
     e_index = (sum(cit_count[:h_index]) - h_index ** 2) ** 0.5
 
-    stats["avg_author_count"] = statistics.mean(author_count)
+    stats["avg_author_count"] = statistics.mean(author_count) if author_count else 0.0
     stats["pub_count"] = len(publications)
 
     return web.json_response(
