@@ -45,12 +45,13 @@ class Server:
             pass
 
     async def _run(self):
-        root = Path(self._app["config"]["storage"]["root"])
+        cfg = self._app["config"]
+        root = Path(cfg["storage"]["root"])
         self._app["users"] = Users(root)
 
         # TODO there will need to be a crawler and merger per user..
         self._app["crawler"] = Crawler(
-            root, enabled=self._app["config"]["storage"].getboolean("crawler"),
+            root, enabled=cfg["storage"].getboolean("crawler"),
         )
 
         self._app["merger"] = Merger(root, self._app["crawler"].storages())
@@ -66,9 +67,7 @@ class Server:
         await runner.setup()
         sites = [
             aiohttp.web_runner.TCPSite(runner),
-            aiohttp.web_runner.UnixSite(
-                runner, self._app["config"]["www"]["unix_socket_path"]
-            ),
+            aiohttp.web_runner.UnixSite(runner, cfg["www"]["unix_socket_path"]),
         ]
 
         try:
@@ -78,10 +77,8 @@ class Server:
                     await site.start()
                     print("*", site.name)
 
-                user, group = self._app["config"]["www"]["chown_unix_socket"].split(":")
-                shutil.chown(
-                    self._app["config"]["www"]["unix_socket_path"], user, group
-                )
+                user, group = cfg["www"]["chown_unix_socket"].split(":")
+                shutil.chown(cfg["www"]["unix_socket_path"], user, group)
 
                 while True:
                     await asyncio.sleep(60 * 60)
