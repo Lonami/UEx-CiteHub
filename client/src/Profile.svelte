@@ -86,18 +86,16 @@ async function save_password() {
 {/await}
 
 <h2>Update password</h2>
-<form>
-    <form bind:this={password_form} on:submit|preventDefault={save_password}>
-        <div>
-            <label for="old_password">Old password: </label>
-            <input type="password" name="old_password" id="old_password" required>
-        </div>
-        <div>
-            <label for="new_password">New password: </label>
-            <input type="password" name="new_password" id="new_password" required>
-        </div>
-        <div>
-            <input bind:this={submit_password} type="submit" value="Update password">
-        </div>
-    </form>
+<form bind:this={password_form} on:submit|preventDefault={save_password}>
+    <div>
+        <label for="old_password">Old password: </label>
+        <input type="password" name="old_password" id="old_password" required>
+    </div>
+    <div>
+        <label for="new_password">New password: </label>
+        <input type="password" name="new_password" id="new_password" required>
+    </div>
+    <div>
+        <input bind:this={submit_password} type="submit" value="Update password">
+    </div>
 </form>
