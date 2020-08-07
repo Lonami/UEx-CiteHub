@@ -43,9 +43,10 @@ async function save_details() {
 
 {#await get_user_profile()}
     <p>Loading external source fields…</p>
-{:then sources}
+{:then profile}
+    <p>Logged in as <em>{profile.username}</em>.</p>
     <form bind:this={source_form} on:submit|preventDefault={save_details}>
-        {#each sources as source}
+        {#each profile.sources as source}
             <div>
                 <label for="es-{source.key}">Value for {source.key}:</label>
                 <input id="es-{source.key}" name={source.key} value={source.value}>
@@ -56,6 +57,7 @@ async function save_details() {
             <input bind:this={submit_button} type="submit" value="Save">
         </div>
     </form>
+    <!-- TODO allow deleting account and updating password -->
 {:catch e}
     <p>Failed to load external source fields: {e.message}</p>
 {/await}

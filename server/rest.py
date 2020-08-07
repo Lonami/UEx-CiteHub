@@ -103,8 +103,15 @@ async def get_publications(request):
 
 
 def get_user_profile(request):
-    # TODO authentication
-    return web.json_response(request.app["crawler"].get_source_fields())
+    # TODO return the specific profile (and perform authcheck in most other methods too)
+    token = request.headers["Authorization"]
+    username = request.app["users"].username_of(token=token)
+    if not username:
+        raise web.HTTPForbidden()
+
+    return web.json_response(
+        {"username": username, "sources": request.app["crawler"].get_source_fields(),}
+    )
 
 
 @utils.locked
