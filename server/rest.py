@@ -150,6 +150,16 @@ def delete_user(request):
     pass
 
 
+async def update_password(request):
+    # TODO it's 500 error to not receive json which shouldn't be (here and everywhere using json)
+    details = await request.json()
+    token = request.headers["Authorization"]
+    result = request.app["users"].change_password(
+        details["old_password"], details["new_password"], token=token
+    )
+    return web.json_response(result)
+
+
 ROUTES = [
     web.get("/rest/publications", get_publications),
     web.get("/rest/user/profile", get_user_profile),
@@ -158,5 +168,5 @@ ROUTES = [
     web.post("/rest/user/register", register_user),
     web.post("/rest/user/login", login_user),
     web.post("/rest/user/logout", logout_user),
-    web.post("/rest/user/delete", delete_user),
+    web.post("/rest/user/update-password", update_password),
 ]

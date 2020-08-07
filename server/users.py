@@ -14,6 +14,18 @@ MAX_DETAILS_LENGTH = 128
 USERNAME_RE = re.compile(r"[a-z]+")
 
 
+def _check_password(password):
+    if len(password) < MIN_PASSWORD_LENGTH:
+        raise web.HTTPBadRequest(
+            reason=f"password must be at least {MIN_PASSWORD_LENGTH} characters long"
+        )
+
+    if len(password) > MAX_DETAILS_LENGTH:
+        raise web.HTTPBadRequest(
+            reason=f"password must be {MAX_DETAILS_LENGTH} characters long or less"
+        )
+
+
 class Users:
     def __init__(self, root):
         self._file = root / "users.json"
@@ -40,15 +52,7 @@ class Users:
         if username in self._users:
             raise web.HTTPBadRequest(reason=f"username is already occupied")
 
-        if len(password) < MIN_PASSWORD_LENGTH:
-            raise web.HTTPBadRequest(
-                reason=f"password must be at least {MIN_PASSWORD_LENGTH} characters long"
-            )
-
-        if len(password) > MAX_DETAILS_LENGTH:
-            raise web.HTTPBadRequest(
-                reason=f"password must be {MAX_DETAILS_LENGTH} characters long or less"
-            )
+        _check_password(password)
 
         salt, password = utils.hash_user_pass(password)
         token = self._gen_token()
@@ -90,6 +94,24 @@ class Users:
 
     def username_of(self, *, token):
         return self._token_to_user.get(token)
+
+    def change_password(self, old_password, new_password, *, token):
+        username = self._token_to_user.get(token)
+        if not username:
+            raise web.HTTPForbidden()
+
+        details = self._users[username]
+        _, password = utils.hash_user_pass(old_password, details["salt"])
+        if password != details["password"]:
+            raise web.HTTPBadRequest(reason="old password did not match")
+
+        _check_password(new_password)
+
+        salt, password = utils.hash_user_pass(new_password)
+        details["salt"] = salt
+        details["password"] = password
+        self._save()
+        return True
 
     def _gen_token(self):
         while True:

@@ -90,3 +90,13 @@ export function delete_user() {
         method: 'POST'
     });
 }
+
+export function update_password(old_password, new_password) {
+    return fetch_json('/rest/user/update-password', {
+        method: 'POST',
+        body: JSON.stringify({
+            old_password,
+            new_password
+        })
+    });
+}
