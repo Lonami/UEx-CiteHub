@@ -1,6 +1,6 @@
 <script>
 import { onMount } from 'svelte';
-import { get_user_profile, update_user_profile, update_password, force_merge } from './rest.js';
+import { get_user_profile, update_user_profile, update_password } from './rest.js';
 
 let source_form;
 let submit_source;
@@ -62,8 +62,6 @@ async function save_password() {
 {#if last_error !== null}
     <p>An error occured: {last_error.message}</p>
 {/if}
-
-<button on:click={force_merge}>Force merge</button>
 
 <h2>Sources</h2>
 {#await get_user_profile()}

@@ -2,7 +2,7 @@
     import Publication from './Publication.svelte';
     import Chart from './Chart.svelte';
 
-    import { get_publications } from './rest.js';
+    import { get_publications, force_merge } from './rest.js';
 
     let sort_by = {key: null, rev: false};
     function set_sort(key) {
@@ -46,6 +46,8 @@
         cursor: pointer;
     }
 </style>
+
+<button on:click={force_merge}>Force merge</button>
 
 <div class="publications">
     {#await get_publications()}
