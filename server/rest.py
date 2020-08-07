@@ -102,13 +102,13 @@ async def get_publications(request):
     )
 
 
-def get_sources(request):
+def get_user_profile(request):
     # TODO authentication
     return web.json_response(request.app["crawler"].get_source_fields())
 
 
 @utils.locked
-async def save_sources(request):
+async def update_user_profile(request):
     result = request.app["crawler"].update_source_fields(await request.json())
     return web.json_response(result)
 
@@ -145,8 +145,8 @@ def delete_user(request):
 
 ROUTES = [
     web.get("/rest/publications", get_publications),
-    web.get("/rest/sources", get_sources),
-    web.post("/rest/sources", save_sources),
+    web.get("/rest/user/profile", get_user_profile),
+    web.post("/rest/user/profile", update_user_profile),
     web.post("/rest/force-merge", force_merge),
     web.post("/rest/user/register", register_user),
     web.post("/rest/user/login", login_user),

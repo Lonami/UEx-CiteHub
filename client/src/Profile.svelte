@@ -1,6 +1,6 @@
 <script>
 import { onMount } from 'svelte';
-import { get_sources, save_sources, force_merge } from './rest.js';
+import { get_user_profile, update_user_profile, force_merge } from './rest.js';
 
 let source_form;
 let submit_button;
@@ -15,7 +15,7 @@ async function save_details() {
         for (let [key, value] of new FormData(source_form).entries()) {
             data[key] = value;
         }
-        let result = await save_sources(data);
+        let result = await update_user_profile(data);
         if (result.errors.length !== 0) {
             let error = 'Some errors occured:';
             for (let e of result.errors) {
@@ -41,7 +41,7 @@ async function save_details() {
 
 <button on:click={force_merge}>Force merge</button>
 
-{#await get_sources()}
+{#await get_user_profile()}
     <p>Loading external source fields…</p>
 {:then sources}
     <form bind:this={source_form} on:submit|preventDefault={save_details}>
