@@ -14,10 +14,10 @@
     <p>Loading metrics</p>
 {:then result}
     <ul>
-        <li>Publication count: <strong>{result.stats.pub_count}</strong></li>
+        <li>Publication count: <strong>{result.pub_count}</strong></li>
         <li>
             Average of authors per publication:
-            <strong title={result.stats.avg_author_count}>{result.stats.avg_author_count.toFixed(2)}</strong>
+            <strong title={result.avg_author_count}>{result.avg_author_count.toFixed(2)}</strong>
         </li>
         <li>e-index: <strong title={result.e_index}>{result.e_index.toFixed(2)}</strong></li>
         <li>g-index: <strong>{result.g_index}</strong></li>

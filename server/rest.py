@@ -17,7 +17,6 @@ async def get_metrics(request):
     pub_count = 0
     cit_count = []
     author_count = []
-    stats = {}
 
     used = set()
     merge_checker = request.app["merger"].checker()
@@ -70,16 +69,14 @@ async def get_metrics(request):
     # e² = sum[j in 1..h](cit_j - h)
     e_index = (sum(cit_count[:h_index]) - h_index ** 2) ** 0.5
 
-    stats["avg_author_count"] = statistics.mean(author_count) if author_count else 0.0
-    stats["pub_count"] = pub_count
-
     return web.json_response(
         {
             "e_index": e_index,
             "g_index": g_index,
             "h_index": h_index,
             "i_indices": i_indices,
-            "stats": stats,  # TODO nested stats why?
+            "avg_author_count": statistics.mean(author_count) if author_count else 0.0,
+            "pub_count": pub_count,
         }
     )
 
