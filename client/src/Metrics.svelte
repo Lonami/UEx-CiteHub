@@ -13,6 +13,13 @@
 {#await get_metrics()}
     <p>Loading metrics</p>
 {:then result}
+    {#if result.pub_count == 0}
+        <p>
+            No publications have been fetched yet. <a href="/profile">Fill your profile</a> with
+            all of the relevant sources you own to start retrieving data from those sites, and
+            after a while refresh this page to get the results.
+        </p>
+    {/if}
     <ul>
         <li>Publication count: <strong>{result.pub_count}</strong></li>
         <li>
