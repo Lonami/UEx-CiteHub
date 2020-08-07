@@ -1,6 +1,7 @@
 <script>
 import { onMount } from 'svelte';
-import { get_user_profile, update_user_profile, update_password } from './rest.js';
+import { get_user_profile, update_user_profile, update_password, delete_user } from './rest.js';
+import { user_token } from './stores.js';
 
 let source_form;
 let submit_source;
@@ -9,6 +10,8 @@ let password_form;
 let submit_password;
 
 let last_error = null;
+
+let delete_confirm;
 
 async function save_details() {
     submit_source.disabled = true;
@@ -54,6 +57,16 @@ async function save_password() {
         submit_password.value = old_submit;
     }
 }
+
+async function delete_account() {
+    try {
+        await delete_user();
+        user_token.set(null);
+        window.location.replace('/');
+    } catch (e) {
+        last_error = e;
+    }
+}
 </script>
 
 <style>
@@ -80,7 +93,6 @@ async function save_password() {
             <input bind:this={submit_source} type="submit" value="Save">
         </div>
     </form>
-    <!-- TODO allow deleting account (including all its downloaded sources) -->
 {:catch e}
     <p>Failed to load external source fields: {e.message}</p>
 {/await}
@@ -97,5 +109,23 @@ async function save_password() {
     </div>
     <div>
         <input bind:this={submit_password} type="submit" value="Update password">
+    </div>
+</form>
+
+<h2>Delete account</h2>
+
+<p>
+    After deleting your account, all of the retrieved data associated with it will be lost.
+    If you're certain this is what you want, type "confirm" without quotes in the text box
+    below and then click the button.
+</p>
+
+<form on:submit|preventDefault={delete_account}>
+    <div>
+        <label for="confirm">Confirmation: </label>
+        <input type="text" name="confirm" id="confirm" bind:value={delete_confirm} required>
+    </div>
+    <div>
+        <input type="submit" value="Delete account" disabled={delete_confirm != "confirm"}>
     </div>
 </form>

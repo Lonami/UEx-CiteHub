@@ -92,6 +92,15 @@ class Users:
         self._save()
         return True
 
+    def delete(self, token):
+        user = self._token_to_user.pop(token, None)
+        if not user:
+            return False
+
+        del self._users[user]
+        self._save()
+        return True
+
     def username_of(self, *, token):
         return self._token_to_user.get(token)
 

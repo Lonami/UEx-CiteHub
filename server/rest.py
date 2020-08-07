@@ -166,7 +166,10 @@ def logout_user(request):
 
 
 def delete_user(request):
-    pass
+    token = request.headers["Authorization"]
+    result = request.app["users"].delete(token)
+    # TODO remove only the data related to us
+    return web.json_response(result)
 
 
 async def update_password(request):
@@ -188,5 +191,6 @@ ROUTES = [
     web.post("/rest/user/register", register_user),
     web.post("/rest/user/login", login_user),
     web.post("/rest/user/logout", logout_user),
+    web.post("/rest/user/delete", delete_user),
     web.post("/rest/user/update-password", update_password),
 ]
