@@ -37,6 +37,9 @@ class Users:
                 reason=f"username must use lowercase ascii letters only"
             )
 
+        if username in self._users:
+            raise web.HTTPBadRequest(reason=f"username is already occupied")
+
         if len(password) < MIN_PASSWORD_LENGTH:
             raise web.HTTPBadRequest(
                 reason=f"password must be at least {MIN_PASSWORD_LENGTH} characters long"
