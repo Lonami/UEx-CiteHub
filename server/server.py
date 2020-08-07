@@ -29,6 +29,7 @@ def serve_index(request):
 APP_ROUTES = [
     web.get("/", serve_index),
     web.get("/login", serve_index),
+    web.get("/register", serve_index),
     web.get("/metrics", serve_index),
     web.get("/publications", serve_index),
     web.get("/profile", serve_index),
