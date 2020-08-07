@@ -44,25 +44,29 @@
         user_token.set(token);
         window.location.replace('/metrics');
     }
-
-    // TODO check if token_value is valid on non-register and skip auto-redirect
-    // TODO what to do on login and register? a token would be "lost", maybe show a message logout before register
 </script>
 
 {#if error !== null}
     <p><strong>Error:</strong> {error.message}</p>
 {/if}
 
-<form bind:this={form} on:submit|preventDefault={handle_submit}>
-    <div>
-        <label for="username">Username: </label>
-        <input type="text" name="username" id="username" required>
-    </div>
-    <div>
-        <label for="password">Password: </label>
-        <input type="password" name="password" id="password" required>
-    </div>
-    <div>
-        <input type="submit" value={register ? "Register" : "Login"}>
-    </div>
-</form>
+{#if token_value === null}
+    <form bind:this={form} on:submit|preventDefault={handle_submit}>
+        <div>
+            <label for="username">Username: </label>
+            <input type="text" name="username" id="username" required>
+        </div>
+        <div>
+            <label for="password">Password: </label>
+            <input type="password" name="password" id="password" required>
+        </div>
+        <div>
+            <input type="submit" value={register ? "Register" : "Login"}>
+        </div>
+    </form>
+{:else}
+    <p>
+        You're already logged in. If you want to register or login to another
+        account you must <a href="/logout">logout</a> first.
+    </p>
+{/if}
