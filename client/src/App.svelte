@@ -4,6 +4,7 @@
     import Login from './Login.svelte';
     import Logout from './Logout.svelte';
     import Navigation from './Navigation.svelte';
+    import Metrics from './Metrics.svelte';
 </script>
 
 <Navigation/>
@@ -15,7 +16,7 @@
 {:else if window.location.pathname === '/login'}
     <Login register={false}/>
 {:else if window.location.pathname === '/metrics'}
-    <p>Metrics…</p>
+    <Metrics/>
 {:else if window.location.pathname === '/publications'}
     <Publications/>
 {:else if window.location.pathname === '/settings'}
