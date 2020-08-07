@@ -2,7 +2,7 @@
     import Publication from './Publication.svelte';
     import Chart from './Chart.svelte';
 
-    import { get_publications } from './rest.js';
+    import { get_metrics } from './rest.js';
 
     function explain_i_index(context) {
         let have = context.value !== '1' ? 's have' : 'has';
@@ -10,8 +10,7 @@
     }
 </script>
 
-<!-- TODO different endpoint -->
-{#await get_publications()}
+{#await get_metrics()}
     <p>Loading metrics</p>
 {:then result}
     <ul>

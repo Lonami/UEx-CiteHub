@@ -40,6 +40,10 @@ async function fetch_json(resource, init) {
     }
 }
 
+export function get_metrics() {
+    return fetch_json('/rest/metrics');
+}
+
 export function get_publications() {
     return fetch_json('/rest/publications');
 }

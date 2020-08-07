@@ -12,8 +12,9 @@ from . import utils
 MAX_I_INDEX = 20
 
 
-async def get_publications(request):
-    publications = []
+async def get_metrics(request):
+    # TODO much repetition with get_publications
+    pub_count = 0
     cit_count = []
     author_count = []
     stats = {}
@@ -26,33 +27,15 @@ async def get_publications(request):
             pub = storage.load_pub(pub_id)
             path = pub.unique_path_name()
 
-            sources = [{"key": source, "ref": pub.ref,}]
             used.add(path)
-            for ns, p in merge_checker.get_related(source, path):
-                # TODO having to load each related publication is quite expensive
-                # probably the entire storage should be in memory AND disk because
-                # it's not that much data (even less if "extra" is not in memory since
-                # we don't use it).
-                sources.append({"key": ns, "ref": storages[ns].load_pub(path=p).ref})
+            for _ns, p in merge_checker.get_related(source, path):
                 used.add(p)
 
             # TODO also merge cites and other stats like author count
             cites = len(pub.cit_paths or ())
             cit_count.append(cites)
             author_count.append(len(pub.authors))
-            # TODO this should be smarter and if anyhas missing data (e.g. year) use a different source
-            publications.append(
-                {
-                    "sources": sources,
-                    "name": pub.name,
-                    "authors": [
-                        {"full_name": storage.load_author(a).full_name}
-                        for a in pub.authors
-                    ],
-                    "cites": cites,
-                    "year": pub.year,
-                }
-            )
+            pub_count += 1
 
     cit_count.sort(reverse=True)
 
@@ -88,7 +71,7 @@ async def get_publications(request):
     e_index = (sum(cit_count[:h_index]) - h_index ** 2) ** 0.5
 
     stats["avg_author_count"] = statistics.mean(author_count) if author_count else 0.0
-    stats["pub_count"] = len(publications)
+    stats["pub_count"] = pub_count
 
     return web.json_response(
         {
@@ -96,10 +79,49 @@ async def get_publications(request):
             "g_index": g_index,
             "h_index": h_index,
             "i_indices": i_indices,
-            "stats": stats,
-            "publications": publications,
+            "stats": stats,  # TODO nested stats why?
         }
     )
+
+
+async def get_publications(request):
+    publications = []
+
+    used = set()
+    merge_checker = request.app["merger"].checker()
+    storages = request.app["crawler"].storages()
+    for source, storage in storages.items():
+        for pub_id in storage.user_pub_ids:
+            pub = storage.load_pub(pub_id)
+            path = pub.unique_path_name()
+
+            sources = [{"key": source, "ref": pub.ref,}]
+            used.add(path)
+            for ns, p in merge_checker.get_related(source, path):
+                # TODO having to load each related publication is quite expensive
+                # probably the entire storage should be in memory AND disk because
+                # it's not that much data (even less if "extra" is not in memory since
+                # we don't use it).
+                sources.append({"key": ns, "ref": storages[ns].load_pub(path=p).ref})
+                used.add(p)
+
+            # TODO also merge cites and other stats like author count
+            cites = len(pub.cit_paths or ())
+            # TODO this should be smarter and if anyhas missing data (e.g. year) use a different source
+            publications.append(
+                {
+                    "sources": sources,
+                    "name": pub.name,
+                    "authors": [
+                        {"full_name": storage.load_author(a).full_name}
+                        for a in pub.authors
+                    ],
+                    "cites": cites,
+                    "year": pub.year,
+                }
+            )
+
+    return web.json_response(publications)
 
 
 def get_user_profile(request):
@@ -161,6 +183,7 @@ async def update_password(request):
 
 
 ROUTES = [
+    web.get("/rest/metrics", get_metrics),
     web.get("/rest/publications", get_publications),
     web.get("/rest/user/profile", get_user_profile),
     web.post("/rest/user/profile", update_user_profile),

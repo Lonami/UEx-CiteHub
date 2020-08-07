@@ -50,7 +50,7 @@
 <div class="publications">
     {#await get_publications()}
         <p>Loading publications…</p>
-    {:then result}
+    {:then publications}
         <table>
             <thead>
                 <tr>
@@ -61,7 +61,7 @@
                 </tr>
             </thead>
             <tbody>
-                {#each sort_list(result.publications) as publication}
+                {#each sort_list(publications) as publication}
                     <Publication {publication}/>
                 {/each}
             </tbody>
