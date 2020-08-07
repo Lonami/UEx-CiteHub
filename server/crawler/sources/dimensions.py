@@ -10,11 +10,16 @@ Both the cookie and X-CSRF-Token headers may also need to be necessary, with ref
     https://app.dimensions.ai/discover/publication?and_facet_researcher=ur.<id>.<n>
 """
 import urllib.parse
+import json
 from typing import Generator, Tuple, Optional
 from ...storage import Author, Publication
 from ..task import Task
 from dataclasses import dataclass
 from ..step import Step
+
+
+def _get_name_arguments(first, last):
+    return dict(full_name=f"{first} {last}".strip(), first_name=first, last_name=last,)
 
 
 async def fetch_author(session, author_id):
@@ -31,14 +36,10 @@ async def fetch_author(session, author_id):
 def adapt_authors(data) -> Generator[Author, None, None]:
     for author in data["data"]:
         author = author["details"]
-        first = author["first_name"]
-        last = author["last_name"]
 
         yield Author(
             id=author["id"],
-            full_name=f"{first} {last}".strip(),
-            first_name=first,
-            last_name=last,
+            *_get_name_arguments(author["first_name"], author["last_name"]),
             extra={
                 "organization": author["current_org_name"],
                 "country": author["current_org_country"],
@@ -60,15 +61,16 @@ def _pub_ref(pub_id):
 
 def adapt_publications(data) -> Generator[Publication, None, None]:
     for pub in data["docs"]:
+        affiliations = json.loads(pub["affiliations_json"])
         yield Publication(
             id=pub["id"],
             name=pub["title"],
             authors=[
                 Author(
-                    # TODO researcher_dim_id seem to match with the names in the author list
-                    full_name=author
+                    id=a["researcher_id"] or None,
+                    *_get_name_arguments(a["first_name"], a["last_name"]),
                 )
-                for author in pub["author_list"].split(", ")
+                for a in affiliations
             ],
             year=pub["pub_year"],
             ref=_pub_ref(pub["id"]),
