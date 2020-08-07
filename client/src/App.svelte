@@ -1,5 +1,5 @@
 <script>
-    import ProfileSettings from './ProfileSettings.svelte';
+    import Profile from './Profile.svelte';
     import Publications from './Publications.svelte';
     import Login from './Login.svelte';
     import Logout from './Logout.svelte';
@@ -9,6 +9,7 @@
 
 <Navigation/>
 
+<!-- Routes also in: Navigation.svelte, server.py -->
 {#if window.location.pathname === '/'}
     <p>There is nothing here. Check one of the other pages in the navigation above.</p>
 {:else if window.location.pathname === '/register'}
@@ -19,8 +20,8 @@
     <Metrics/>
 {:else if window.location.pathname === '/publications'}
     <Publications/>
-{:else if window.location.pathname === '/settings'}
-    <ProfileSettings/>
+{:else if window.location.pathname === '/profile'}
+    <Profile/>
 {:else if window.location.pathname === '/logout'}
     <Logout/>
 {:else}

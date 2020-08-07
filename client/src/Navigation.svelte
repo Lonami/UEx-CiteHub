@@ -44,6 +44,7 @@ a::after {
 
 <nav>
     <ol>
+        <!-- Routes also in: App.svelte, server.py -->
         <li><a href='/' class:selected={window.location.pathname == '/'}>UEx CiteHub</a></li>
         {#if token === null}
             <li><a href='/register' class:selected={window.location.pathname == '/register'}>Register</a></li>
@@ -51,7 +52,7 @@ a::after {
         {:else}
             <li><a href='/metrics' class:selected={window.location.pathname == '/metrics'}>Metrics</a></li>
             <li><a href='/publications' class:selected={window.location.pathname == '/publications'}>Publications</a></li>
-            <li><a href='/settings' class:selected={window.location.pathname == '/settings'}>Settings</a></li>
+            <li><a href='/profile' class:selected={window.location.pathname == '/profile'}>Profile</a></li>
             <li><a href='/logout' class:selected={window.location.pathname == '/logout'}>Logout</a></li>
         {/if}
     </ol>

@@ -25,13 +25,13 @@ def serve_index(request):
     )
 
 
+# Routes also in: App.svelte, Navigation-sveñte
 APP_ROUTES = [
     web.get("/", serve_index),
-    web.get("/register", serve_index),
     web.get("/login", serve_index),
     web.get("/metrics", serve_index),
     web.get("/publications", serve_index),
-    web.get("/settings", serve_index),
+    web.get("/profile", serve_index),
     web.get("/logout", serve_index),
 ]
 
