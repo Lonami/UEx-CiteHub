@@ -1,7 +1,7 @@
 <script>
 import { onMount } from 'svelte';
 import { get_user_profile, update_user_profile, update_password, delete_user } from './rest.js';
-import { user_token } from './stores.js';
+import { logged_in } from './stores.js';
 
 let source_form;
 let submit_source;
@@ -61,7 +61,7 @@ async function save_password() {
 async function delete_account() {
     try {
         await delete_user();
-        user_token.set(null);
+        logged_in.set(false);
         window.location.replace('/');
     } catch (e) {
         last_error = e;

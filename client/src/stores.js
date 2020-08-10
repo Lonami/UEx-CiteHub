@@ -1,11 +1,9 @@
 import { writable } from 'svelte/store';
 
-export const user_token = writable(localStorage.getItem('user_token'));
+// The token is a HttpOnly cookie which we can't access, but as long as we stay in sync this
+// value will be correct (and if it's not the server will return forbidden on bad access).
+export const logged_in = writable(JSON.parse(localStorage.getItem('logged_in') || "false"));
 
-const unsubscribe = user_token.subscribe(value => {
-    if (value === null) {
-        localStorage.removeItem('user_token');
-    } else {
-        localStorage.setItem('user_token', value);
-    }
+const unsubscribe = logged_in.subscribe(value => {
+    localStorage.setItem('logged_in', JSON.stringify(value));
 });

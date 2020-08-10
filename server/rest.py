@@ -10,6 +10,7 @@ from . import utils
 
 
 MAX_I_INDEX = 20
+AUTH_TOKEN_COOKIE = "token"
 
 
 async def get_metrics(request):
@@ -123,7 +124,7 @@ async def get_publications(request):
 
 def get_user_profile(request):
     # TODO return the specific profile (and perform authcheck in most other methods too)
-    token = request.headers["Authorization"]
+    token = request.cookies.get(AUTH_TOKEN_COOKIE)
     username = request.app["users"].username_of(token=token)
     if not username:
         raise web.HTTPForbidden()
@@ -149,33 +150,51 @@ async def register_user(request):
     request.app["auth"].check_whitelist(details["username"])
     request.app["auth"].apply_rate_limit(request)
     token = request.app["users"].register(details["username"], details["password"])
-    return web.json_response(token)
+    resp = web.json_response(True)
+    resp.set_cookie(
+        AUTH_TOKEN_COOKIE,
+        token,
+        httponly=True,
+        secure=request.app["config"]["www"].getboolean("secure", True),
+    )
+    return resp
 
 
 async def login_user(request):
     details = await request.json()
     request.app["auth"].apply_rate_limit(request)
     token = request.app["users"].login(details["username"], details["password"])
-    return web.json_response(token)
+    resp = web.json_response(True)
+    resp.set_cookie(
+        AUTH_TOKEN_COOKIE,
+        token,
+        httponly=True,
+        secure=request.app["config"]["www"].getboolean("secure", True),
+    )
+    return resp
 
 
 def logout_user(request):
-    token = request.headers["Authorization"]
+    token = request.cookies.get(AUTH_TOKEN_COOKIE)
     result = request.app["users"].logout(token)
-    return web.json_response(result)
+    resp = web.json_response(result)
+    resp.del_cookie(AUTH_TOKEN_COOKIE)
+    return resp
 
 
 def delete_user(request):
-    token = request.headers["Authorization"]
+    token = request.cookies.get(AUTH_TOKEN_COOKIE)
     result = request.app["users"].delete(token)
     # TODO remove only the data related to us
-    return web.json_response(result)
+    resp = web.json_response(result)
+    resp.del_cookie(AUTH_TOKEN_COOKIE)
+    return resp
 
 
 async def update_password(request):
     # TODO it's 500 error to not receive json which shouldn't be (here and everywhere using json)
     details = await request.json()
-    token = request.headers["Authorization"]
+    token = request.cookies.get(AUTH_TOKEN_COOKIE)
     result = request.app["users"].change_password(
         details["old_password"], details["new_password"], token=token
     )

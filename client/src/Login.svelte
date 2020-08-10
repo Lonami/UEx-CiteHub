@@ -1,12 +1,12 @@
 <script>
     import { register_user, login_user } from './rest.js';
-    import { user_token } from './stores.js';
+    import { logged_in } from './stores.js';
 
     export let register;
 
-    let token_value;
-	const unsubscribe = user_token.subscribe(value => {
-		token_value = value;
+    let is_logged;
+	const unsubscribe = logged_in.subscribe(value => {
+		is_logged = value;
 	});
 
     let form;
@@ -21,15 +21,15 @@
     async function handle_submit(event) {
         set_form_enabled(false);
 
-        let token = null;
+        let logged = false;
         try {
             if (register) {
-                token = await register_user(
+                logged = await register_user(
                     event.target.username.value,
                     event.target.password.value
                 );
             } else {
-                token = await login_user(
+                logged = await login_user(
                     event.target.username.value,
                     event.target.password.value
                 )
@@ -41,7 +41,7 @@
             set_form_enabled(true);
         }
 
-        user_token.set(token);
+        logged_in.set(logged);
         window.location.replace('/metrics');
     }
 </script>
@@ -50,7 +50,12 @@
     <p><strong>Error:</strong> {error.message}</p>
 {/if}
 
-{#if token_value === null}
+{#if is_logged}
+    <p>
+        You're already logged in. If you want to register or login to another
+        account you must <a href="/logout">logout</a> first.
+    </p>
+{:else}
     <form bind:this={form} on:submit|preventDefault={handle_submit}>
         <div>
             <label for="username">Username: </label>
@@ -64,9 +69,4 @@
             <input type="submit" value={register ? "Register" : "Login"}>
         </div>
     </form>
-{:else}
-    <p>
-        You're already logged in. If you want to register or login to another
-        account you must <a href="/logout">logout</a> first.
-    </p>
 {/if}

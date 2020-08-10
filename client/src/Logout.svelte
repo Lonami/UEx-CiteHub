@@ -1,6 +1,6 @@
 <script>
     import { logout_user } from './rest.js';
-    import { user_token } from './stores.js';
+    import { logged_in } from './stores.js';
 
     let text = 'Logging out…';
 
@@ -12,7 +12,7 @@
             return;
         }
 
-        user_token.set(null);
+        logged_in.set(false);
         window.location.replace('/login');
         text = `Logout success. <a href="/login">Login again</a>.`;
     }

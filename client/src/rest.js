@@ -1,10 +1,3 @@
-import { user_token } from './stores.js';
-
-let token;
-const unsubscribe = user_token.subscribe(value => {
-    token = value;
-});
-
 function NetworkError(message, status) {
     var instance = new Error(message);
     instance.name = 'NetworkError';
@@ -27,11 +20,6 @@ NetworkError.prototype = Object.create(Error.prototype, {
 Object.setPrototypeOf(NetworkError, Error);
 
 async function fetch_json(resource, init) {
-    if (token !== null) {
-        init = init || {};
-        init['headers'] = init['headers'] || {};
-        init['headers']['Authorization'] = token;
-    }
     const res = await fetch(resource, init);
     if (res.ok) {
         return await res.json();
