@@ -9,7 +9,7 @@
     export let explanation_fn;
 
     let canvas;
-	onMount(() => {
+    onMount(() => {
         // TODO not sure if doing labels like this is the right way
         let labels = [];
         data.forEach(function (datum, index) {
@@ -24,32 +24,32 @@
                     data,
                 }]
             },
-			options: {
+            options: {
                 tooltips: {
                     callbacks: {
                         title: function() { return ''; },
                         label: explanation_fn
                     }
                 },
-				scales: {
-					xAxes: [{
-						display: true,
-						scaleLabel: {
-							display: true,
-							labelString: x_label
-						}
-					}],
-					yAxes: [{
-						display: true,
-						scaleLabel: {
-							display: true,
-							labelString: y_label
-						}
-					}]
+                scales: {
+                    xAxes: [{
+                        display: true,
+                        scaleLabel: {
+                            display: true,
+                            labelString: x_label
+                        }
+                    }],
+                    yAxes: [{
+                        display: true,
+                        scaleLabel: {
+                            display: true,
+                            labelString: y_label
+                        }
+                    }]
                 }
             }
         });
-	});
+    });
 </script>
 
 <style>

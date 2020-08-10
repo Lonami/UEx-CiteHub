@@ -2,7 +2,7 @@
     import { logged_in } from './stores.js';
 
     let is_logged;
-	const unsubscribe = logged_in.subscribe(value => {
+    const unsubscribe = logged_in.subscribe(value => {
         is_logged = value;
         if (window.location.pathname === '/') {
             if (is_logged) {
@@ -11,7 +11,7 @@
                 window.location.replace('/login');
             }
         }
-	});
+    });
 </script>
 
 <style>

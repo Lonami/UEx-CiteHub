@@ -5,9 +5,9 @@
     export let register;
 
     let is_logged;
-	const unsubscribe = logged_in.subscribe(value => {
-		is_logged = value;
-	});
+    const unsubscribe = logged_in.subscribe(value => {
+        is_logged = value;
+    });
 
     let form;
     let error = null;
