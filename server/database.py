@@ -185,8 +185,10 @@ class Database:
                 f"INSERT INTO {tup.__class__.__name__} VALUES ({fields})", tup
             )
 
-    async def _execute(self, query, *args):
-        return await self._db.execute(query, args)
+    @_transaction
+    async def _execute(self, query, *args, cursor=None):
+        await cursor.execute(query, args)
+        return cursor.rowcount
 
     # Public methods
 
@@ -197,26 +199,20 @@ class Database:
             User(username=username, password=password, salt=salt, token=token,)
         )
 
-    @_transaction
-    async def login_user(self, *, username, token, cursor=None):
-        await cursor.execute(
+    async def login_user(self, *, username, token):
+        await self._execute(
             "UPDATE User SET token = ? WHERE username = ?", token, username
         )
 
-    @_transaction
-    async def logout_user(self, *, username, cursor=None):
-        await cursor.execute(
-            "UPDATE User SET token = null WHERE username = ?", username
-        )
+    async def logout_user(self, *, username):
+        await self._execute("UPDATE User SET token = null WHERE username = ?", username)
 
-    @_transaction
-    async def delete_user(self, *, username, cursor=None):
-        await cursor.execute("DELETE FROM User WHERE username = ?", username)
-        return cursor.rowcount != 0
+    async def delete_user(self, *, username):
+        rowcount = await self._execute("DELETE FROM User WHERE username = ?", username)
+        return rowcount != 0
 
-    @_transaction
-    async def update_user_password(self, *, username, password, salt, cursor=None):
-        await cursor.execute(
+    async def update_user_password(self, *, username, password, salt):
+        await self._execute(
             "UPDATE User SET password = ?, salt = ? WHERE username = ?",
             password,
             salt,
