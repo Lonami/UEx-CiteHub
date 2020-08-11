@@ -75,12 +75,12 @@ def hash_user_pass(password, salt=None):
 
     # https://nakedsecurity.sophos.com/2013/11/20/serious-security-how-to-store-your-users-passwords-safely/
     return (
-        base64.b64encode(salt).decode("ascii"),
         base64.b64encode(
             hashlib.pbkdf2_hmac(
                 "sha256", password.encode("utf-8"), salt, PASSWORD_HASH_ITERATIONS
             )
         ).decode("ascii"),
+        base64.b64encode(salt).decode("ascii"),
     )
 
 
