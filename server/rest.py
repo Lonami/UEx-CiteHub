@@ -2,6 +2,7 @@ import itertools
 import uuid
 import json
 import statistics
+import functools
 from pathlib import Path
 
 from aiohttp import web
@@ -13,7 +14,26 @@ MAX_I_INDEX = 20
 AUTH_TOKEN_COOKIE = "token"
 
 
-async def get_metrics(request):
+def _require_user(func):
+    """
+    Decorator to mark functions that need the user to be logged in.
+    The `username` argument will be provided.
+    """
+
+    @functools.wraps(func)
+    async def wrapped(request, *args, **kwargs):
+        token = request.cookies.get(AUTH_TOKEN_COOKIE)
+        username = await request.app["users"].username_of(token=token)
+        if username:
+            return await func(request, *args, username=username, **kwargs)
+        else:
+            raise web.HTTPForbidden()
+
+    return wrapped
+
+
+@_require_user
+async def get_metrics(request, username):
     raise web.HTTPForbidden()  # TODO
 
     # TODO much repetition with get_publications
@@ -84,7 +104,8 @@ async def get_metrics(request):
     )
 
 
-async def get_publications(request):
+@_require_user
+async def get_publications(request, username):
     raise web.HTTPForbidden()  # TODO
     publications = []
 
@@ -125,7 +146,8 @@ async def get_publications(request):
     return web.json_response(publications)
 
 
-def get_user_profile(request):
+@_require_user
+def get_user_profile(request, username):
     raise web.HTTPForbidden()  # TODO
     # TODO return the specific profile (and perform authcheck in most other methods too)
     token = request.cookies.get(AUTH_TOKEN_COOKIE)
@@ -138,25 +160,27 @@ def get_user_profile(request):
     )
 
 
-@utils.locked
-async def update_user_profile(request):
+@_require_user
+async def update_user_profile(request, username):
     raise web.HTTPForbidden()  # TODO
     result = request.app["crawler"].update_source_fields(await request.json())
     return web.json_response(result)
 
 
-async def force_merge(request):
+@_require_user
+async def force_merge(request, username):
     raise web.HTTPForbidden()  # TODO
     ok = request.app["merger"].force_merge()
     return web.json_response({"ok": ok})
 
 
 async def register_user(request):
-    raise web.HTTPForbidden()  # TODO
     details = await request.json()
     request.app["auth"].check_whitelist(details["username"])
     request.app["auth"].apply_rate_limit(request)
-    token = request.app["users"].register(details["username"], details["password"])
+    token = await request.app["users"].register(
+        details["username"], details["password"]
+    )
     resp = web.json_response(True)
     resp.set_cookie(
         AUTH_TOKEN_COOKIE,
@@ -168,10 +192,9 @@ async def register_user(request):
 
 
 async def login_user(request):
-    raise web.HTTPForbidden()  # TODO
     details = await request.json()
     request.app["auth"].apply_rate_limit(request)
-    token = request.app["users"].login(details["username"], details["password"])
+    token = await request.app["users"].login(details["username"], details["password"])
     resp = web.json_response(True)
     resp.set_cookie(
         AUTH_TOKEN_COOKIE,
@@ -182,32 +205,29 @@ async def login_user(request):
     return resp
 
 
-def logout_user(request):
-    raise web.HTTPForbidden()  # TODO
-    token = request.cookies.get(AUTH_TOKEN_COOKIE)
-    result = request.app["users"].logout(token)
+@_require_user
+async def logout_user(request, username):
+    result = await request.app["users"].logout(username)
     resp = web.json_response(result)
     resp.del_cookie(AUTH_TOKEN_COOKIE)
     return resp
 
 
-def delete_user(request):
-    raise web.HTTPForbidden()  # TODO
-    token = request.cookies.get(AUTH_TOKEN_COOKIE)
-    result = request.app["users"].delete(token)
+@_require_user
+async def delete_user(request, username):
+    result = await request.app["users"].delete(username)
     # TODO remove only the data related to us
     resp = web.json_response(result)
     resp.del_cookie(AUTH_TOKEN_COOKIE)
     return resp
 
 
-async def update_password(request):
-    raise web.HTTPForbidden()  # TODO
+@_require_user
+async def update_password(request, username):
     # TODO it's 500 error to not receive json which shouldn't be (here and everywhere using json)
     details = await request.json()
-    token = request.cookies.get(AUTH_TOKEN_COOKIE)
-    result = request.app["users"].change_password(
-        details["old_password"], details["new_password"], token=token
+    result = await request.app["users"].change_password(
+        username, details["old_password"], details["new_password"]
     )
     return web.json_response(result)
 

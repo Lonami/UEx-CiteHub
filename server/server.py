@@ -51,6 +51,11 @@ class Server:
     async def _run(self):
         cfg = self._app["config"]
         self._app["db"] = Database(self._app["config"]["storage"]["path"])
+        self._app["users"] = Users(self._app["db"])
+        self._app["auth"] = Auth(
+            fail_retry_delay=cfg["auth"].get("fail_retry_delay"),
+            csv_whitelist=cfg["auth"].get("whitelist"),
+        )
 
         # Have to do this inside a coroutine to keep `aiohttp` happy
         runner = web.AppRunner(

@@ -70,22 +70,16 @@ class Users:
         await self._db.login_user(username=username, token=token)
         return token
 
-    async def logout(self, token):
-        username = await self._db.get_username(token=token)
+    async def logout(self, username):
         return await self._db.logout_user(username=username)
 
-    async def delete(self, token):
-        username = await self._db.get_username(token=token)
+    async def delete(self, username):
         return await self._db.delete_user(username=username)
 
     async def username_of(self, *, token):
         return await self._db.get_username(token=token)
 
-    async def change_password(self, old_password, new_password, *, token):
-        username = await self._db.get_username(token=token)
-        if not username:
-            raise web.HTTPForbidden()
-
+    async def change_password(self, username, old_password, new_password):
         details = await self._db.get_user_password(username=username)
 
         password, _ = utils.hash_user_pass(*details)
