@@ -60,8 +60,10 @@ class Users:
         if not details:
             raise bad_info
 
-        password, _ = utils.hash_user_pass(*details)
-        if password != details[0]:
+        saved_password, salt = details
+        password, _ = utils.hash_user_pass(password, salt)
+
+        if password != saved_password:
             raise bad_info
 
         token = await self._gen_token()
