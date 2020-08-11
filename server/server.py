@@ -17,6 +17,7 @@ from .crawler import Crawler
 from .merger import Merger
 from .users import Users
 from .auth import Auth
+from .database import Database
 
 
 def serve_index(request):
@@ -49,6 +50,7 @@ class Server:
 
     async def _run(self):
         cfg = self._app["config"]
+        self._app["db"] = Database(self._app["config"]["storage"]["path"])
 
         # Have to do this inside a coroutine to keep `aiohttp` happy
         runner = web.AppRunner(
@@ -65,17 +67,18 @@ class Server:
         ]
 
         try:
-            print("Running on:")
-            for site in sites:
-                await site.start()
-                print("*", site.name)
+            async with self._app["db"]:
+                print("Running on:")
+                for site in sites:
+                    await site.start()
+                    print("*", site.name)
 
-            user, group = cfg["www"]["chown_unix_socket"].split(":")
-            shutil.chown(cfg["www"]["unix_socket_path"], user, group)
-            os.chmod(cfg["www"]["unix_socket_path"], stat.S_IRGRP | stat.S_IWGRP)
+                user, group = cfg["www"]["chown_unix_socket"].split(":")
+                shutil.chown(cfg["www"]["unix_socket_path"], user, group)
+                os.chmod(cfg["www"]["unix_socket_path"], stat.S_IRGRP | stat.S_IWGRP)
 
-            while True:
-                await asyncio.sleep(60 * 60)
+                while True:
+                    await asyncio.sleep(60 * 60)
         except KeyboardInterrupt:
             pass
         finally:
