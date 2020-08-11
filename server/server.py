@@ -49,19 +49,6 @@ class Server:
 
     async def _run(self):
         cfg = self._app["config"]
-        root = Path(cfg["storage"]["root"])
-        self._app["users"] = Users(root)
-        self._app["auth"] = Auth(
-            fail_retry_delay=cfg["auth"].get("fail_retry_delay"),
-            csv_whitelist=cfg["auth"].get("whitelist"),
-        )
-
-        # TODO there will need to be a crawler and merger per user..
-        self._app["crawler"] = Crawler(
-            root, enabled=cfg["storage"].getboolean("crawler"),
-        )
-
-        self._app["merger"] = Merger(root, self._app["crawler"].storages())
 
         # Have to do this inside a coroutine to keep `aiohttp` happy
         runner = web.AppRunner(
@@ -78,18 +65,17 @@ class Server:
         ]
 
         try:
-            async with self._app["crawler"], self._app["merger"]:
-                print("Running on:")
-                for site in sites:
-                    await site.start()
-                    print("*", site.name)
+            print("Running on:")
+            for site in sites:
+                await site.start()
+                print("*", site.name)
 
-                user, group = cfg["www"]["chown_unix_socket"].split(":")
-                shutil.chown(cfg["www"]["unix_socket_path"], user, group)
-                os.chmod(cfg["www"]["unix_socket_path"], stat.S_IRGRP | stat.S_IWGRP)
+            user, group = cfg["www"]["chown_unix_socket"].split(":")
+            shutil.chown(cfg["www"]["unix_socket_path"], user, group)
+            os.chmod(cfg["www"]["unix_socket_path"], stat.S_IRGRP | stat.S_IWGRP)
 
-                while True:
-                    await asyncio.sleep(60 * 60)
+            while True:
+                await asyncio.sleep(60 * 60)
         except KeyboardInterrupt:
             pass
         finally:

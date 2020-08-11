@@ -14,6 +14,8 @@ AUTH_TOKEN_COOKIE = "token"
 
 
 async def get_metrics(request):
+    raise web.HTTPForbidden()  # TODO
+
     # TODO much repetition with get_publications
     pub_count = 0
     cit_count = []
@@ -83,6 +85,7 @@ async def get_metrics(request):
 
 
 async def get_publications(request):
+    raise web.HTTPForbidden()  # TODO
     publications = []
 
     used = set()
@@ -123,6 +126,7 @@ async def get_publications(request):
 
 
 def get_user_profile(request):
+    raise web.HTTPForbidden()  # TODO
     # TODO return the specific profile (and perform authcheck in most other methods too)
     token = request.cookies.get(AUTH_TOKEN_COOKIE)
     username = request.app["users"].username_of(token=token)
@@ -136,16 +140,19 @@ def get_user_profile(request):
 
 @utils.locked
 async def update_user_profile(request):
+    raise web.HTTPForbidden()  # TODO
     result = request.app["crawler"].update_source_fields(await request.json())
     return web.json_response(result)
 
 
 async def force_merge(request):
+    raise web.HTTPForbidden()  # TODO
     ok = request.app["merger"].force_merge()
     return web.json_response({"ok": ok})
 
 
 async def register_user(request):
+    raise web.HTTPForbidden()  # TODO
     details = await request.json()
     request.app["auth"].check_whitelist(details["username"])
     request.app["auth"].apply_rate_limit(request)
@@ -161,6 +168,7 @@ async def register_user(request):
 
 
 async def login_user(request):
+    raise web.HTTPForbidden()  # TODO
     details = await request.json()
     request.app["auth"].apply_rate_limit(request)
     token = request.app["users"].login(details["username"], details["password"])
@@ -175,6 +183,7 @@ async def login_user(request):
 
 
 def logout_user(request):
+    raise web.HTTPForbidden()  # TODO
     token = request.cookies.get(AUTH_TOKEN_COOKIE)
     result = request.app["users"].logout(token)
     resp = web.json_response(result)
@@ -183,6 +192,7 @@ def logout_user(request):
 
 
 def delete_user(request):
+    raise web.HTTPForbidden()  # TODO
     token = request.cookies.get(AUTH_TOKEN_COOKIE)
     result = request.app["users"].delete(token)
     # TODO remove only the data related to us
@@ -192,6 +202,7 @@ def delete_user(request):
 
 
 async def update_password(request):
+    raise web.HTTPForbidden()  # TODO
     # TODO it's 500 error to not receive json which shouldn't be (here and everywhere using json)
     details = await request.json()
     token = request.cookies.get(AUTH_TOKEN_COOKIE)
