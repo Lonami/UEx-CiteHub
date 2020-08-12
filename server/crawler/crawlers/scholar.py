@@ -381,7 +381,8 @@ class CrawlScholar(Task):
         self._storage.user_pub_ids = []
         self._due = 0
 
-    async def _step(self, stage, session) -> Step:
+    @classmethod
+    async def _step(cls, values, stage, session) -> Step:
         if not self._storage.user_author_id:
             return Step(delay=FULL_DELAY, stage=None)
 

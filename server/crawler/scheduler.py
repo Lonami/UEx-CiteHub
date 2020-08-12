@@ -18,64 +18,19 @@ MAX_SLEEP = 60
 _log = logging.getLogger(__name__)
 
 
-class _Tasks:
-    # A class to namespace all the various tasks
-    def __init__(self, root: Path):
-        self._root = root
-        self._tasks = {}
-        for cls in CRAWLERS:
-            if cls.namespace() in self._tasks:
-                raise ValueError(
-                    f'two different tasks have the same namespace "{cls.namespace()}": '
-                    f"{self._tasks[cls.namespace()].__class__.__name__} and {cls.__name__}"
-                )
-            else:
-                self._tasks[cls.namespace()] = cls(root)
-
-    def tasks(self):
-        return self._tasks.values()
-
-    def set_field(self, namespace, key, value):
-        self._tasks[namespace].set_field(key, value)
-
-    def load(self):
-        _log.info("loading tasks")
-        for task in self.tasks():
-            _log.debug("loading task %s", task.namespace())
-            task.load()
-
-    def save(self):
-        _log.info("saving tasks")
-        for task in self.tasks():
-            _log.debug("saving task %s", task.namespace())
-            task.save()
-
-    def next_task(self):
-        return min(self.tasks())
-
-
 class Scheduler:
-    def __init__(self, storage_root: Path, *, enabled: bool):
-        self._root = storage_root
+    def __init__(self, db, *, enabled: bool):
+        self._db = db
         self._enabled = enabled
         self._crawl_task = None
-        self._tasks = _Tasks(self._root)
-        # Contains the required fields for the various tasks (persisted only for the frontend)
-        # {namespace: {key, value}}
-        self._sources_file = self._root / "external-sources.json"
-        self._sources = {task.namespace(): {} for task in self._tasks.tasks()}
         self._crawl_notify = asyncio.Event()
         self._client_session = ClientSession()
-
-    def storages(self):
-        # TODO not sure what the best way to access storages is
-        return {t.namespace(): t._storage for t in self._tasks.tasks()}
 
     async def _crawl(self):
         try:
             while True:
-                task = self._tasks.next_task()
-                delay = task.remaining_delay()
+                source = await self._db.next_source_task()
+                delay = source.due - time.time()
                 if delay > MAX_SLEEP:
                     await self._wait_notify(MAX_SLEEP)
                     continue
@@ -83,12 +38,29 @@ class Scheduler:
                 if await self._wait_notify(delay):
                     continue  # tasks changed so we don't want to step on any
 
-                _log.debug(
-                    "stepping task %s at stage %s", task.namespace(), task._stage
+                _log.debug("stepping source task %s/%s", source.owner, source.key)
+
+                # TODO should these checks be here or in task? do crawlers expect empty values?
+                if source.values_json:
+                    values = json.loads(source.values_json)
+                else:
+                    values = {}
+                if source.task_json:
+                    state = json.loads(source.task_json)
+                else:
+                    state = CRAWLERS[source.key].initial_stage()
+
+                # TODO except step error
+                step, due = await CRAWLERS[source.key].step(
+                    values=values, state=state, session=self._client_session
                 )
-                await task.step(self._client_session)
-                task.save()
-                _log.debug("stepped task %s, next at %s", task.namespace(), task.due())
+                # TODO begin transaction to save the produced values in the step and due in a transaction
+                _log.debug(
+                    "stepped source task %s/%s, next at %d",
+                    source.owner,
+                    source.key,
+                    due,
+                )
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -103,21 +75,27 @@ class Scheduler:
         except asyncio.TimeoutError:
             return False
 
-    def get_source_fields(self):
+    # TODO get/update source fields probably don't belong here (and with less confusing names?)
+    async def get_source_fields(self, username):
         fields = []
-        for task in self._tasks.tasks():
-            for key, description in task.fields().items():
-                fields.append(
-                    {
-                        "key": f"{task.namespace()}.{key}",
-                        "description": description,
-                        "value": self._sources[task.namespace()].get(key),
-                    }
-                )
+        values = await self._db.get_source_values(username)
+        for key, crawler in CRAWLERS.items():
+            fields.append(
+                {
+                    "key": key,
+                    "fields": {
+                        k: {"description": desc, "value": values[key].get(k) or "",}
+                        for k, desc in crawler.fields().items()
+                    },
+                }
+            )
 
         return fields
 
-    def update_source_fields(self, sources):
+    async def update_source_fields(self, username, sources):
+        from aiohttp import web
+
+        raise web.HTTPForbidden()  # TODO
         if not self._enabled:
             return
 
@@ -148,18 +126,11 @@ class Scheduler:
         self._crawl_notify.set()
         return {"errors": errors}
 
-    def save(self):
-        utils.save_json(self._sources, self._sources_file)
-        self._tasks.save()
-
     async def __aenter__(self):
         # Sources and tasks will be in sync as we update them, which means there is no need to
         # synchronize the tasks based on the sources we loaded but we still need both to let the
         # user know what sources they have configured.
         _log.info("entering crawler")
-
-        utils.try_load_json(self._sources, self._sources_file)
-        self._tasks.load()
 
         # Crawling is a long-running task we can't block on
         if self._enabled:
@@ -170,8 +141,6 @@ class Scheduler:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         _log.info("exiting crawler")
-        self.save()
-
         if not self._enabled:
             return
 

@@ -2,11 +2,13 @@ from aiosqlite import Connection
 from collections import namedtuple
 import sqlite3
 import functools
+import json
 
 
 DB_VERSION = 1
 Version = namedtuple("Version", "version")
 User = namedtuple("User", "username password salt token")
+Source = namedtuple("Source", "owner key values_json task_json due")
 
 
 def _transaction(func):
@@ -230,6 +232,16 @@ class Database:
     async def has_user(self, *, username: str):
         user = await self._select_one(User, "WHERE username = ?", username)
         return user is not None
+
+    async def next_source_task(self):
+        return await self._select_one(Source, "ORDER BY due ASC LIMIT 1")
+
+    async def get_source_values(self, username):
+        result = {}
+        async with self._select(Source, "WHERE owner = ?", username) as select:
+            async for source in select:
+                result[source.key] = json.loads(source.values_json)
+        return result
 
 
 if __name__ == "__main__":
