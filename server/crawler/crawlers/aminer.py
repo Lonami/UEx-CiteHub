@@ -215,11 +215,10 @@ class CrawlArnetMiner(Task):
             "your profile. Click on it when you find it and copy the URL."
         }
 
-    def set_field(self, key, value):
+    @classmethod
+    def validate_field(self, key, value):
         assert key == "url", f"invalid key {key}"
-        self._storage.user_author_id = None if not value else author_id_from_url(value)
-        self._storage.user_pub_ids = []
-        self._due = 0
+        author_id_from_url(value)  # will raise (fail validation) on bad value
 
     @classmethod
     async def _step(cls, values, stage, session) -> Step:

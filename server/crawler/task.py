@@ -59,9 +59,9 @@ class Task(abc.ABC):
         # The description may contain HTML tags.
         raise NotImplementedError
 
-    # TODO rework setfield to just validate and adapt a value
+    @classmethod
     @abc.abstractmethod
-    def set_field(self, key, value):
+    def validate_field(self, key, value) -> Mapping:
         raise NotImplementedError
 
     @classmethod

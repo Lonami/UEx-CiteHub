@@ -295,13 +295,13 @@ class CrawlAcademics(Task):
             "URL."
         }
 
-    def set_field(self, key, value):
+    @classmethod
+    def validate_field(self, key, value):
         assert key == "url", f"invalid key {key}"
-        self._storage.user_author_id = None if not value else author_id_from_url(value)
-        self._storage.user_pub_ids = []
-        self._due = 0
+        author_id_from_url(value)  # will raise (fail validation) on bad value
 
-    async def _step(self, stage, session) -> Step:
+    @classmethod
+    async def _step(cls, values, stage, session) -> Step:
         if not self._storage.user_author_id:
             return Step(delay=24 * 60 * 60, stage=None)
 
