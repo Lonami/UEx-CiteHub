@@ -74,6 +74,10 @@ class Task(abc.ABC):
         if not isinstance(cls.Stage, type):
             raise RuntimeError("task subclass should define a nested Stage class")
 
+        # Don't bother stepping unless all the values exist in the required fields
+        if not all(values.get(k) for k in cls.fields()):
+            return None, int(time.time()) + 24 * 60 * 60
+
         stage_index = state.pop("_index")
         for field in dir(cls.Stage):
             Field = getattr(cls.Stage, field)
