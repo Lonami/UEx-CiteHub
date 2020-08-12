@@ -10,7 +10,7 @@ from pathlib import Path
 
 from aiohttp import ClientSession
 
-from .sources import CRAWLERS
+from .crawlers import CRAWLERS
 from .. import utils
 
 
@@ -54,8 +54,7 @@ class _Tasks:
         return min(self.tasks())
 
 
-class Crawler:
-    # The crawler just runs tasks
+class Scheduler:
     def __init__(self, storage_root: Path, *, enabled: bool):
         self._root = storage_root
         self._enabled = enabled
