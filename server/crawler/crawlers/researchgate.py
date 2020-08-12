@@ -14,7 +14,7 @@ import urllib.parse
 import re
 import bs4
 import logging
-from typing import Generator
+from typing import Generator, List
 from ...storage import Author, Publication
 from ..task import Task
 from dataclasses import dataclass
@@ -124,13 +124,14 @@ class Stage:
     @dataclass
     class FetchToken:
         INDEX = 1
+        known_pub_ids: List[str]
 
     @dataclass
     class FetchCitations:
         INDEX = 2
         rg_token: str
         sid: str
-        offset: int = 0
+        missing_pub_ids: List[str]
         cit_offset: int = 0
 
 
@@ -160,28 +161,32 @@ class CrawlResearchGate(Task):
 
     @classmethod
     async def _step(cls, values, stage, session) -> Step:
-        if not self._storage.user_author_id:
-            return Step(delay=24 * 60 * 60, stage=None)
+        user_author_id = author_id_from_url(values["url"])
 
         if isinstance(stage, Stage.FetchPublications):
-            soup = await fetch_author(session, self._storage.user_author_id)
+            soup = await fetch_author(session, user_author_id)
             self_publications = list(adapt_publications(soup))
 
             return Step(
-                delay=1, stage=Stage.FetchToken(), self_publications=self_publications,
+                delay=1,
+                stage=Stage.FetchToken(known_pub_ids=[p.id for p in self_publications]),
+                self_publications=self_publications,
             )
 
         elif isinstance(stage, Stage.FetchToken):
             rg_token, sid = await fetch_token_sid(session)
             return Step(
-                delay=10 * 60, stage=Stage.FetchCitations(rg_token=rg_token, sid=sid),
+                delay=10 * 60,
+                stage=Stage.FetchCitations(
+                    rg_token=rg_token, sid=sid, missing_pub_ids=stage.known_pub_ids
+                ),
             )
 
         elif isinstance(stage, Stage.FetchCitations):
-            if stage.offset >= len(self._storage.user_pub_ids):
-                return Step(delay=24 * 60 * 60, stage=self.initial_stage(),)
+            if not stage.missing_pub_ids:
+                return Step(delay=24 * 60 * 60, stage=cls.initial_stage())
 
-            pub_id = self._storage.user_pub_ids[stage.offset]
+            pub_id = stage.missing_pub_ids[0]
 
             soup = await fetch_citations(
                 session, stage.rg_token, stage.sid, pub_id, stage.cit_offset
@@ -194,7 +199,7 @@ class CrawlResearchGate(Task):
                     stage=Stage.FetchCitations(
                         rg_token=stage.rg_token,
                         sid=stage.sid,
-                        offset=stage.offset,
+                        missing_pub_ids=stage.missing_pub_ids,
                         cit_offset=stage.cit_offset + len(citations),
                     ),
                     citations={pub_id: citations},
@@ -203,7 +208,9 @@ class CrawlResearchGate(Task):
                 return Step(
                     delay=2 * 60,
                     stage=Stage.FetchCitations(
-                        rg_token=stage.rg_token, sid=stage.sid, offset=stage.offset + 1
+                        rg_token=stage.rg_token,
+                        sid=stage.sid,
+                        missing_pub_ids=stage.missing_pub_ids[1:],
                     ),
                     citations={pub_id: citations},
                 )

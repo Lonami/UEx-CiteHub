@@ -11,7 +11,7 @@ Both the cookie and X-CSRF-Token headers may also need to be necessary, with ref
 """
 import urllib.parse
 import json
-from typing import Generator, Tuple, Optional
+from typing import Generator, Tuple, Optional, List
 from ...storage import Author, Publication
 from ..task import Task
 from dataclasses import dataclass
@@ -125,12 +125,13 @@ class Stage:
     @dataclass
     class FetchPublications:
         INDEX = 1
+        known_pub_ids: Optional[List[str]] = None
         cursor: Optional[str] = None
 
     @dataclass
     class FetchCitations:
         INDEX = 2
-        offset: int = 0
+        missing_pub_ids: List[str]
         cursor: Optional[str] = None
 
 
@@ -162,41 +163,43 @@ class CrawlDimensions(Task):
 
     @classmethod
     async def _step(cls, values, stage, session) -> Step:
-        if not self._storage.user_author_id:
-            return Step(delay=24 * 60 * 60, stage=None)
+        user_author_id = author_id_from_url(values["url"])
 
         if isinstance(stage, Stage.FetchAuthors):
-            data = await fetch_author(session, self._storage.user_author_id)
+            data = await fetch_author(session, user_author_id)
             authors = list(adapt_authors(data))
             return Step(
                 delay=10 * 60, stage=Stage.FetchPublications(), authors=authors,
             )
 
         elif isinstance(stage, Stage.FetchPublications):
-            data = await fetch_publications(
-                session, self._storage.user_author_id, stage.cursor
-            )
+            data = await fetch_publications(session, user_author_id, stage.cursor)
             cursor = data["next_cursor"]
             self_publications = list(adapt_publications(data))
+            known_pub_ids = (stage.known_pub_ids or []) + [
+                p.id for p in self_publications
+            ]
 
             if cursor:
                 return Step(
                     delay=5 * 60,
-                    stage=Stage.FetchPublications(cursor=cursor),
+                    stage=Stage.FetchPublications(
+                        known_pub_ids=known_pub_ids, cursor=cursor,
+                    ),
                     self_publications=self_publications,
                 )
             else:
                 return Step(
                     delay=10 * 60,
-                    stage=Stage.FetchCitations(),
+                    stage=Stage.FetchCitations(missing_pub_ids=known_pub_ids),
                     self_publications=self_publications,
                 )
 
         elif isinstance(stage, Stage.FetchCitations):
-            if stage.offset >= len(self._storage.user_pub_ids):
-                return Step(delay=24 * 60 * 60, stage=self.initial_stage(),)
+            if not stage.missing_pub_ids:
+                return Step(delay=24 * 60 * 60, stage=cls.initial_stage())
 
-            pub_id = self._storage.user_pub_ids[stage.offset]
+            pub_id = stage.missing_pub_ids[0]
 
             data = await fetch_citations(session, pub_id, stage.cursor)
             cursor = data["next_cursor"]
@@ -206,12 +209,16 @@ class CrawlDimensions(Task):
             if cursor:
                 return Step(
                     delay=5 * 60,
-                    stage=Stage.FetchCitations(offset=stage.offset, cursor=cursor),
+                    stage=Stage.FetchCitations(
+                        missing_pub_ids=stage.missing_pub_ids[1:], cursor=cursor
+                    ),
                     citations={pub_id: citations},
                 )
             else:
                 return Step(
                     delay=10 * 60,
-                    stage=Stage.FetchCitations(offset=stage.offset + 1),
+                    stage=Stage.FetchCitations(
+                        missing_pub_ids=stage.missing_pub_ids[1:],
+                    ),
                     citations={pub_id: citations},
                 )

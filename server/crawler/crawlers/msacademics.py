@@ -302,11 +302,10 @@ class CrawlAcademics(Task):
 
     @classmethod
     async def _step(cls, values, stage, session) -> Step:
-        if not self._storage.user_author_id:
-            return Step(delay=24 * 60 * 60, stage=None)
+        user_author_id = author_id_from_url(values["url"])
 
         if isinstance(stage, Stage.FetchQueries):
-            data = await fetch_profile(session, self._storage.user_author_id)
+            data = await fetch_profile(session, user_author_id)
             return Step(
                 delay=1,
                 stage=Stage.FetchPublications(
@@ -359,7 +358,7 @@ class CrawlAcademics(Task):
                     citations.setdefault(cites_id, []).append(cit)
 
             if offset >= cit_count or not citations:
-                return Step(delay=30 * 60, stage=self.initial_stage(),)
+                return Step(delay=30 * 60, stage=cls.initial_stage())
             else:
                 return Step(
                     delay=2 * 60,

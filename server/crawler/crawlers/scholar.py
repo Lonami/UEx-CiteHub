@@ -342,16 +342,18 @@ class Stage:
     @dataclass
     class FetchPublications:
         INDEX = 1
-        offset: int = _PAGE_SIZE
+        known_pub_ids = List[str]
 
     @dataclass
     class FetchSinglePublication:
         INDEX = 2
+        known_pub_ids = List[str]
         offset: int = 0
 
     @dataclass
     class FetchCitations:
         INDEX = 3
+        known_pub_ids = List[str]
         offset: int
         cit_url: str
 
@@ -382,26 +384,24 @@ class CrawlScholar(Task):
 
     @classmethod
     async def _step(cls, values, stage, session) -> Step:
-        if not self._storage.user_author_id:
-            return Step(delay=FULL_DELAY, stage=None)
+        user_author_id = author_id_from_url(values["url"])
 
         if isinstance(stage, Stage.FetchFirst):
-            soup = await _get_page(
-                session, _URL_AUTHOR.format(self._storage.user_author_id)
-            )
+            soup = await _get_page(session, _URL_AUTHOR.format(user_author_id))
             self_author, self_publications, pubs_remain = parse_author_profile(soup)
+            known_pub_ids = [p.id for p in self_publications]
 
             if pubs_remain:
                 return Step(
                     delay=PROFILE_DELAY,
-                    stage=Stage.FetchPublications(),
+                    stage=Stage.FetchPublications(known_pub_ids=known_pub_ids),
                     authors=[self_author],
                     self_publications=self_publications,
                 )
             else:
                 return Step(
                     delay=PUBLICATION_DELAY,
-                    stage=Stage.FetchSinglePublication(),
+                    stage=Stage.FetchSinglePublication(known_pub_ids=known_pub_ids),
                     authors=[self_author],
                     self_publications=self_publications,
                 )
@@ -409,46 +409,49 @@ class CrawlScholar(Task):
         elif isinstance(stage, Stage.FetchPublications):
             soup = await _get_page(
                 session,
-                _URL_AUTHOR.format(self._storage.user_author_id)
-                + f"&cstart={stage.offset}",
+                _URL_AUTHOR.format(user_author_id)
+                + f"&cstart={len(stage.known_pub_ids)}",
             )
             self_publications, pubs_remain = parse_author_profile_publications(soup)
+            known_pub_ids = stage.known_pub_ids + [p.id for p in self_publications]
 
             if pubs_remain:
                 return Step(
                     delay=PROFILE_DELAY,
-                    stage=Stage.FetchPublications(
-                        offset=stage.offset + len(self_publications)
-                    ),
+                    stage=Stage.FetchPublications(known_pub_ids=known_pub_ids),
                     self_publications=self_publications,
                 )
             else:
                 return Step(
                     delay=PUBLICATION_DELAY,
-                    stage=Stage.FetchSinglePublication(),
+                    stage=Stage.FetchSinglePublication(known_pub_ids=known_pub_ids),
                     self_publications=self_publications,
                 )
 
         elif isinstance(stage, Stage.FetchSinglePublication):
-            if stage.offset >= len(self._storage.user_pub_ids):
-                return Step(delay=FULL_DELAY, stage=self.initial_stage(),)
+            if stage.offset >= len(stage.known_pub_ids):
+                return Step(delay=FULL_DELAY, stage=cls.initial_stage())
 
-            soup = await _get_page(
-                session,
-                _URL_PUBLICATION.format(self._storage.user_pub_ids[stage.offset]),
-            )
+            pub_id = stage.known_pub_ids[stage.offset]
+            soup = await _get_page(session, _URL_PUBLICATION.format(pub_id),)
             pub, cit_url = parse_publication(soup)
 
             if cit_url:
                 return Step(
                     delay=CITATION_DELAY,
-                    stage=Stage.FetchCitations(offset=stage.offset, cit_url=cit_url),
+                    stage=Stage.FetchCitations(
+                        known_pub_ids=stage.known_pub_ids,
+                        offset=stage.offset,
+                        cit_url=cit_url,
+                    ),
                     self_publications=[pub],
                 )
             else:
                 return Step(
                     delay=PUBLICATION_DELAY,
-                    stage=Stage.FetchSinglePublication(offset=stage.offset + 1),
+                    stage=Stage.FetchSinglePublication(
+                        known_pub_ids=stage.known_pub_ids, offset=stage.offset + 1
+                    ),
                     self_publications=[pub],
                 )
 
@@ -456,17 +459,23 @@ class CrawlScholar(Task):
             soup = await _get_page(session, url=stage.cit_url)
             citations, cit_url = parse_citations(soup)
 
-            pub_id = self._storage.user_pub_ids[stage.offset]
+            pub_id = stage.known_pub_ids[stage.offset]
 
             if cit_url:
                 return Step(
                     delay=CITATION_DELAY,
-                    stage=Stage.FetchCitations(offset=stage.offset, cit_url=cit_url),
+                    stage=Stage.FetchCitations(
+                        known_pub_ids=stage.known_pub_ids,
+                        offset=stage.offset,
+                        cit_url=cit_url,
+                    ),
                     citations={pub_id: citations},
                 )
             else:
                 return Step(
                     delay=PUBLICATION_DELAY,
-                    stage=Stage.FetchSinglePublication(offset=stage.offset + 1),
+                    stage=Stage.FetchSinglePublication(
+                        known_pub_ids=stage.known_pub_ids, offset=stage.offset + 1
+                    ),
                     citations={pub_id: citations},
                 )
