@@ -1,12 +1,9 @@
 import abc
-import asyncio
-import json
 import random
 import time
 import logging
-import datetime
 from typing import Mapping
-from dataclasses import asdict, is_dataclass
+from dataclasses import is_dataclass
 from .step import Step
 from ..storage import Storage
 
@@ -98,7 +95,7 @@ class Task(abc.ABC):
                 delay,
             )
 
-            due = asyncio.get_event_loop().time() + delay
+            due = time.time() + delay
             raise StepException(due)
         else:
             error = 0
@@ -114,5 +111,5 @@ class Task(abc.ABC):
 
         jitter_range = step.delay * DELAY_JITTER_PERCENT
         jitter = random.uniform(-jitter_range, jitter_range)
-        due = asyncio.get_event_loop().time() + step.delay + jitter
+        due = time.time() + step.delay + jitter
         return step, due
