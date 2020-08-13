@@ -59,6 +59,7 @@ class Server:
         self._app["scheduler"] = Scheduler(
             self._app["db"], enabled=cfg["storage"].getboolean("crawler"),
         )
+        self._app["merger"] = Merger(self._app["db"])
 
         # Have to do this inside a coroutine to keep `aiohttp` happy
         runner = web.AppRunner(
@@ -75,7 +76,7 @@ class Server:
         ]
 
         try:
-            async with self._app["db"], self._app["scheduler"]:
+            async with self._app["db"], self._app["scheduler"], self._app["merger"]:
                 print("Running on:")
                 for site in sites:
                     await site.start()

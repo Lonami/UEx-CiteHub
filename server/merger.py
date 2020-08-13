@@ -6,6 +6,7 @@ from collections import defaultdict
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from . import utils
+from .crawler import CRAWLERS
 
 AUTO_DELAY = 24 * 60 * 60
 SIMILARITY_THRESHOLD = 0.9
@@ -24,34 +25,19 @@ def similarity(a, b, _words_re=re.compile(r"\w+")):
         return 0.0
 
 
-class MergeCheck:
-    def __init__(self, data):
-        # {ns: {path: [(related ns, related path)]}}
-        self._relations = defaultdict(lambda: defaultdict(list))
-        for datum in data:
-            merge = Merge(**datum)
-            self._relations[merge.ns_a][merge.pub_a].append((merge.ns_b, merge.pub_b))
-            self._relations[merge.ns_b][merge.pub_b].append((merge.ns_a, merge.pub_a))
-
-    def get_related(self, namespace, path_name):
-        return self._relations[namespace][path_name]
-
-
 @dataclass
 class Merge:
-    ns_a: str
-    ns_b: str
+    source_a: str
+    source_b: str
     pub_a: str
     pub_b: str
     similarity: float
 
 
-# TODO we need a way to standarize task storages
 class Merger:
     # The merger runs automatically or on demand and merges storage information
-    def __init__(self, root: Path, storages):
-        self._root = root
-        self._storages = storages
+    def __init__(self, db):
+        self._db = db
         self._merge_task = None
         self._force_check = asyncio.Event()
 
@@ -75,51 +61,35 @@ class Merger:
             _log.exception("unhandled exception in crawl task")
 
     async def _merge(self):
+        for username in await self._db.get_usernames():
+            _log.info("checking merges for user %s", username)
+            await self._merge_user(username)
+
+    async def _merge_user(self, username):
         result = []
-        for ((ns_a, storage_a), (ns_b, storage_b)) in itertools.combinations(
-            self._storages.items(), 2
-        ):
-            _log.debug("checking merges between %s and %s", ns_a, ns_b)
-            for (pub_id_a, pub_id_b) in itertools.product(
-                storage_a.user_pub_ids, storage_b.user_pub_ids
-            ):
-                pub_a = storage_a.load_pub(pub_id_a)
-                pub_b = storage_b.load_pub(pub_id_b)
+        for (source_a, source_b) in itertools.combinations(CRAWLERS, 2):
+            _log.debug("checking merges between %s and %s", source_a, source_b)
+            pubs_a = await self._db.get_source_publications(username, source_a)
+            pubs_b = await self._db.get_source_publications(username, source_b)
+            for (pub_a, pub_b) in itertools.product(pubs_a, pubs_b):
                 sim = similarity(pub_a, pub_b)
                 if sim >= SIMILARITY_THRESHOLD:
                     result.append(
                         Merge(
-                            ns_a=ns_a,
-                            ns_b=ns_b,
+                            source_a=source_a,
+                            source_b=source_b,
                             pub_a=pub_a.unique_path_name(),
                             pub_b=pub_b.unique_path_name(),
                             similarity=sim,
                         )
                     )
 
-                for (cit_path_a, cit_path_b) in itertools.product(
-                    pub_a.cit_paths or [], pub_b.cit_paths or []
-                ):
-                    cit_a = storage_a.load_pub(path=Path(cit_path_a))
-                    cit_b = storage_b.load_pub(path=Path(cit_path_b))
-                    sim = similarity(cit_a, cit_b)
-                    if sim >= SIMILARITY_THRESHOLD:
-                        result.append(
-                            Merge(
-                                ns_a=ns_a,
-                                ns_b=ns_b,
-                                pub_a=cit_path_a,
-                                pub_b=cit_path_b,
-                                similarity=sim,
-                            )
-                        )
-
                 # Yielding control to the event loop for every publication pair seems to do
                 # a pretty good job, and the web server is able to respond while we do this
                 # even if it's pretty CPU intensive (although IO loads may play a big role).
                 await asyncio.sleep(0)
 
-        utils.save_json(list(map(asdict, result)), self._root / "merges.json")
+        await self._db.save_merges(username, result)
 
     def force_merge(self):
         if self._force_check.is_set():
@@ -127,9 +97,6 @@ class Merger:
 
         self._force_check.set()
         return True
-
-    def checker(self):
-        return MergeCheck(utils.try_load_list(self._root / "merges.json"))
 
     async def __aenter__(self):
         _log.info("entering merger")

@@ -110,7 +110,6 @@ async def update_user_profile(request, username):
 
 @_require_user
 async def force_merge(request, username):
-    raise web.HTTPForbidden()  # TODO
     ok = request.app["merger"].force_merge()
     return web.json_response({"ok": ok})
 

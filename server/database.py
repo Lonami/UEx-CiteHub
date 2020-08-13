@@ -21,6 +21,7 @@ PublicationAuthors = namedtuple(
     "PublicationAuthors", "owner source pub_path author_path"
 )
 Cites = namedtuple("Cites", "owner source pub_path cited_by")
+Merge = namedtuple("Merge", "owner source_a source_b pub_a pub_b")
 
 
 def _transaction(func):
@@ -67,6 +68,12 @@ class Select:
         tup = await self._cursor.fetchone()
         if tup:
             return self._table(*tup)
+
+    async def all(self):
+        result = []
+        async for item in self:
+            result.append(item)
+        return result
 
     def __aiter__(self):
         return self
@@ -193,8 +200,23 @@ class Database:
             PRIMARY KEY(owner, source, pub_path, cited_by)
         ) WITHOUT ROWID"""
         )
+        await cursor.execute(
+            """CREATE TABLE Merge (
+            owner TEXT,
+            source_a TEXT,
+            source_b TEXT,
+            pub_a TEXT,
+            pub_b TEXT,
+            similarity REAL NOT NULL,
+            FOREIGN KEY(owner) REFERENCES User(username),
+            FOREIGN KEY(owner, source_a) REFERENCES Source(owner, key),
+            FOREIGN KEY(owner, source_b) REFERENCES Source(owner, key),
+            FOREIGN KEY(owner, source_a, pub_a) REFERENCES Publication(owner, source, path),
+            FOREIGN KEY(owner, source_b, pub_b) REFERENCES Publication(owner, source, path),
+            PRIMARY KEY(owner, source_a, source_b, pub_a, pub_b)
+        ) WITHOUT ROWID"""
+        )
         await cursor.execute("INSERT INTO Version VALUES (?)", (DB_VERSION,))
-        # TODO merges
 
     @_transaction
     async def _upgrade_tables(self, cursor=None):
@@ -208,6 +230,10 @@ class Database:
     async def _select_one(self, table: type, query: str = "", *args):
         async with Select(self._db, table, query, args) as select:
             return await select.one()
+
+    async def _select_all(self, table: type, query: str = "", *args):
+        async with Select(self._db, table, query, args) as select:
+            return await select.all()
 
     @_transaction
     async def _insert(self, *tuples, cursor=None):
@@ -366,6 +392,38 @@ class Database:
             step.due(),
             source.owner,
             source.key,
+            cursor=cursor,
+        )
+
+    async def get_usernames(self):
+        usernames = []
+        async with self._select(User) as select:
+            async for user in select:
+                usernames.append(user.username)
+        return usernames
+
+    async def get_source_publications(self, username, source):
+        return await self._select_all(
+            Publication, "WHERE owner = ? AND source = ?", username, source
+        )
+
+    @_transaction
+    async def save_merges(self, username, merges, *, cursor=None):
+        await self._execute(
+            "DELETE FROM Merge WHERE owner = ?", username, cursor=cursor
+        )
+        await self._insert(
+            *(
+                Merge(
+                    owner=username,
+                    source_a=m.source_a,
+                    source_b=m.source_b,
+                    pub_a=m.pub_a,
+                    pub_b=m.pub_b,
+                    similarity=m.similarity,
+                )
+                for m in merges
+            ),
             cursor=cursor,
         )
 
