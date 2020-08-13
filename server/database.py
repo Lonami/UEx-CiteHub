@@ -147,7 +147,7 @@ class Database:
             last_name TEXT,
             extra_json TEXT,
             FOREIGN KEY(owner) REFERENCES User(username),
-            FOREIGN KEY(source) REFERENCES Source(key),
+            FOREIGN KEY(owner, source) REFERENCES Source(owner, key),
             PRIMARY KEY(owner, source, path)
         ) WITHOUT ROWID"""
         )
@@ -163,7 +163,7 @@ class Database:
             ref TEXT,
             extra_json TEXT,
             FOREIGN KEY(owner) REFERENCES User(username),
-            FOREIGN KEY(source) REFERENCES Source(key),
+            FOREIGN KEY(owner, source) REFERENCES Source(owner, key),
             PRIMARY KEY(owner, source, path)
         ) WITHOUT ROWID"""
         )
@@ -174,9 +174,9 @@ class Database:
             pub_path TEXT,
             author_path TEXT,
             FOREIGN KEY(owner) REFERENCES User(username),
-            FOREIGN KEY(source) REFERENCES Source(key),
-            FOREIGN KEY(pub_path) REFERENCES Publication(path),
-            FOREIGN KEY(author_path) REFERENCES Author(path),
+            FOREIGN KEY(owner, source) REFERENCES Source(owner, key),
+            FOREIGN KEY(owner, source, pub_path) REFERENCES Publication(owner, source, path),
+            FOREIGN KEY(owner, source, author_path) REFERENCES Author(owner, source, path),
             PRIMARY KEY(owner, source, pub_path, author_path)
         ) WITHOUT ROWID"""
         )
@@ -187,9 +187,9 @@ class Database:
             pub_path TEXT,
             cited_by TEXT,
             FOREIGN KEY(owner) REFERENCES User(username),
-            FOREIGN KEY(source) REFERENCES Source(key),
-            FOREIGN KEY(pub_path) REFERENCES Publication(path),
-            FOREIGN KEY(cited_by) REFERENCES Publication(path),
+            FOREIGN KEY(owner, source) REFERENCES Source(owner, key),
+            FOREIGN KEY(owner, source, pub_path) REFERENCES Publication(owner, source, path),
+            FOREIGN KEY(owner, source, cited_by) REFERENCES Publication(owner, source, path),
             PRIMARY KEY(owner, source, pub_path, cited_by)
         ) WITHOUT ROWID"""
         )
