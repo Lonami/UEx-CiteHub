@@ -17,9 +17,9 @@ def _get_crawlers():
         CrawlScholar,
     ):
         ns = cls.namespace()
-        dup = CRAWLERS.get(ns)
+        dup = crawlers.get(ns)
         if dup is None:
-            CRAWLERS[ns] = cls
+            crawlers[ns] = cls
         else:
             raise RuntimeError(f"crawlers key {ns} is not unique ({cls} and {dup})")
     return crawlers
