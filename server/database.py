@@ -185,9 +185,9 @@ class Database:
             cited_by TEXT,
             FOREIGN KEY(owner) REFERENCES User(username),
             FOREIGN KEY(source) REFERENCES Source(key),
-            FOREIGN KEY(pub) REFERENCES Publication(path),
+            FOREIGN KEY(pub_path) REFERENCES Publication(path),
             FOREIGN KEY(cited_by) REFERENCES Publication(path),
-            PRIMARY KEY(owner, source, pub, cited_by)
+            PRIMARY KEY(owner, source, pub_path, cited_by)
         ) WITHOUT ROWID"""
         )
         await cursor.execute("INSERT INTO Version VALUES (?)", (DB_VERSION,))
