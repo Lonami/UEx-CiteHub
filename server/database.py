@@ -68,6 +68,9 @@ class Select:
         if tup:
             return self._table(*tup)
 
+    def __aiter__(self):
+        return self
+
     async def __anext__(self):
         return self._table(*await self._cursor.__anext__())
 
@@ -273,11 +276,12 @@ class Database:
     @_transaction
     async def update_source_values(self, username, sources, *, cursor=None):
         for source, fields in sources.items():
-            cursor.execute(
+            self._execute(
                 "UPDATE Source SET values_json = ?, due = 0 WHERE owner = ? AND key = ?",
                 json.dumps(fields),
                 username,
                 source,
+                cursor=cursor,
             )
 
     @_transaction
@@ -343,12 +347,13 @@ class Database:
                 ),
                 cursor=cursor,
             )
-        cursor.execute(
+        self._execute(
             "UPDATE Source SET task_json = ?, due = ? WHERE owner = ? AND key = ?",
             step.stage_as_json(),
             step.due(),
             source.owner,
             source.key,
+            cursor=cursor,
         )
 
 
