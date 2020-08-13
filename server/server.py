@@ -13,7 +13,7 @@ import aiohttp
 from aiohttp import web
 
 from . import helpers, rest
-from .crawler import Crawler
+from .crawler import Scheduler
 from .merger import Merger
 from .users import Users
 from .auth import Auth
@@ -56,6 +56,9 @@ class Server:
             fail_retry_delay=cfg["auth"].get("fail_retry_delay"),
             csv_whitelist=cfg["auth"].get("whitelist"),
         )
+        self._app["scheduler"] = Scheduler(
+            self._app["db"], enabled=cfg["storage"].getboolean("crawler"),
+        )
 
         # Have to do this inside a coroutine to keep `aiohttp` happy
         runner = web.AppRunner(
@@ -72,7 +75,7 @@ class Server:
         ]
 
         try:
-            async with self._app["db"]:
+            async with self._app["db"], self._app["scheduler"]:
                 print("Running on:")
                 for site in sites:
                     await site.start()

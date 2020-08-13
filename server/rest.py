@@ -147,23 +147,20 @@ async def get_publications(request, username):
 
 
 @_require_user
-def get_user_profile(request, username):
-    raise web.HTTPForbidden()  # TODO
-    # TODO return the specific profile (and perform authcheck in most other methods too)
-    token = request.cookies.get(AUTH_TOKEN_COOKIE)
-    username = request.app["users"].username_of(token=token)
-    if not username:
-        raise web.HTTPForbidden()
-
+async def get_user_profile(request, username):
     return web.json_response(
-        {"username": username, "sources": request.app["crawler"].get_source_fields(),}
+        {
+            "username": username,
+            "sources": await request.app["scheduler"].get_source_fields(username),
+        }
     )
 
 
 @_require_user
 async def update_user_profile(request, username):
-    raise web.HTTPForbidden()  # TODO
-    result = request.app["crawler"].update_source_fields(await request.json())
+    result = await request.app["scheduler"].update_source_fields(
+        username, await request.json()
+    )
     return web.json_response(result)
 
 

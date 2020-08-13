@@ -28,17 +28,17 @@ def _transaction(func):
     async def wrapped(self, *args, **kwargs):
         if "cursor" in kwargs:
             # Already in a transaction
-            await func(self, *args, **kwargs)
-            return
+            return await func(self, *args, **kwargs)
 
         async with self._db.execute("BEGIN") as cursor:
             try:
-                await func(self, *args, cursor=cursor, **kwargs)
+                ret = await func(self, *args, cursor=cursor, **kwargs)
             except sqlite3.Error:
                 await cursor.execute("ROLLBACK")
                 raise
             else:
                 await cursor.execute("COMMIT")
+            return ret
 
     return wrapped
 
@@ -131,7 +131,7 @@ class Database:
             key TEXT,
             values_json TEXT,
             task_json TEXT,
-            due INTEGER,
+            due INTEGER NOT NULL,
             FOREIGN KEY(owner) REFERENCES User(username),
             PRIMARY KEY(owner, key)
         ) WITHOUT ROWID"""
@@ -276,17 +276,29 @@ class Database:
     @_transaction
     async def update_source_values(self, username, sources, *, cursor=None):
         for source, fields in sources.items():
-            self._execute(
+            values_json = json.dumps(fields)
+            rowcount = await self._execute(
                 "UPDATE Source SET values_json = ?, due = 0 WHERE owner = ? AND key = ?",
-                json.dumps(fields),
+                values_json,
                 username,
                 source,
                 cursor=cursor,
             )
+            if rowcount == 0:
+                await self._insert(
+                    Source(
+                        owner=username,
+                        key=source,
+                        values_json=values_json,
+                        task_json=None,
+                        due=0,
+                    ),
+                    cursor=cursor,
+                )
 
     @_transaction
     async def save_crawler_step(self, source, step, *, cursor=None):
-        self._insert(
+        await self._insert(
             *(
                 Author(
                     owner=source.owner,
@@ -302,7 +314,7 @@ class Database:
             ),
             cursor=cursor,
         )
-        self._insert(
+        await self._insert(
             *(
                 Publication(
                     owner=source.owner,
@@ -320,7 +332,7 @@ class Database:
             cursor=cursor,
         )
         for pub, _ in _adapt_step_publications(step):
-            self._insert(
+            await self._insert(
                 *(
                     PublicationAuthors(
                         owner=source.owner,
@@ -335,7 +347,7 @@ class Database:
         for cites_pub_id, citations in step.citations.items():
             # TODO bad (maybe the step should have a method to get all the tuples to insert?)
             pub_path = StepPublication(name="", id=cites_pub_id).unique_path_name()
-            self._insert(
+            await self._insert(
                 *(
                     Cites(
                         owner=source.owner,
@@ -347,7 +359,7 @@ class Database:
                 ),
                 cursor=cursor,
             )
-        self._execute(
+        await self._execute(
             "UPDATE Source SET task_json = ?, due = ? WHERE owner = ? AND key = ?",
             step.stage_as_json(),
             step.due(),

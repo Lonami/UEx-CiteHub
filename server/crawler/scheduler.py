@@ -84,20 +84,16 @@ class Scheduler:
 
     # TODO get/update source fields probably don't belong here (and with less confusing names?)
     async def get_source_fields(self, username):
-        sources = []
+        sources = {}
         values = await self._db.get_source_values(username)
         for source, crawler in CRAWLERS.items():
-            sources.append(
-                {
-                    source: {
-                        key: {
-                            "description": desc,
-                            "value": values[source].get(key) or "",
-                        }
-                        for key, desc in crawler.fields().items()
-                    },
+            sources[source] = {
+                key: {
+                    "description": desc,
+                    "value": values.get(source, {}).get(key) or "",
                 }
-            )
+                for key, desc in crawler.fields().items()
+            }
 
         return sources
 
@@ -111,17 +107,20 @@ class Scheduler:
 
         for source, fields in sources.items():
             for key, value in fields.items():
-                if values[source].get(key) == value:
+                value = value.strip()
+                if values.get(source, {}).get(key) == value:
                     _log.debug("source %s/%s/%s has not changed", username, source, key)
                     continue
 
                 try:
-                    CRAWLERS[source].validate_field(key, value)
+                    if value:
+                        # Empty values won't validate but they are valid (as empty)
+                        CRAWLERS[source].validate_field(key, value)
                 except Exception as e:
                     _log.exception("failed to set %s/%s/%s", username, source, key)
                     errors.append({"source": source, "key": key, "reason": str(e)})
                 else:
-                    values[source][key] = value
+                    values.setdefault(source, {})[key] = value
                     changed_sources.add(source)
 
         await self._db.update_source_values(

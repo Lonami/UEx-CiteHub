@@ -18,11 +18,16 @@ async function save_details() {
     let old_submit = submit_source.value;
     submit_source.value = 'Saving…';
     try {
-        let data = {}
-        for (let [key, value] of new FormData(source_form).entries()) {
-            data[key] = value;
+        let sources = {};
+        for (let [source_key, value] of new FormData(source_form).entries()) {
+            let [source, key] = source_key.split(".");
+            if (sources[source] === undefined) {
+                sources[source] = {};
+            }
+            sources[source][key] = value;
         }
-        let result = await update_user_profile(data);
+        console.log(sources);
+        let result = await update_user_profile(sources);
         if (result.errors.length !== 0) {
             let error = 'Some errors occured:';
             for (let e of result.errors) {
@@ -82,12 +87,17 @@ async function delete_account() {
 {:then profile}
     <p>Logged in as <em>{profile.username}</em>.</p>
     <form bind:this={source_form} on:submit|preventDefault={save_details}>
-        {#each profile.sources as source}
-            <div>
-                <label for="es-{source.key}">Value for {source.key}:</label>
-                <input id="es-{source.key}" name={source.key} value={source.value}>
-                <p>{@html source.description}</p>
-            </div>
+        {#each Object.entries(profile.sources) as [source, fields]}
+            <fieldset>
+                <legend>{source}</legend>
+                {#each Object.entries(fields) as [key, value]}
+                    <div>
+                        <label for="{source}.{key}">Value for {key}:</label>
+                        <input id="{source}.{key}" name="{source}.{key}" value={value.value}>
+                        <p>{@html value.description}</p>
+                    </div>
+                {/each}
+            </fieldset>
         {/each}
         <div>
             <input bind:this={submit_source} type="submit" value="Save">
