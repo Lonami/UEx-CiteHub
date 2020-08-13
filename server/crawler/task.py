@@ -4,7 +4,6 @@ import logging
 from typing import Mapping
 from dataclasses import is_dataclass, asdict
 from .step import Step
-from ..storage import Storage
 
 
 _log = logging.getLogger(__name__)
