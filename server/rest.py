@@ -34,30 +34,11 @@ def _require_user(func):
 
 @_require_user
 async def get_metrics(request, username):
-    raise web.HTTPForbidden()  # TODO
+    publications = await request.app["db"].get_publications(username)
 
-    # TODO much repetition with get_publications
-    pub_count = 0
-    cit_count = []
-    author_count = []
-
-    used = set()
-    merge_checker = request.app["merger"].checker()
-    storages = request.app["crawler"].storages()
-    for source, storage in storages.items():
-        for pub_id in storage.user_pub_ids:
-            pub = storage.load_pub(pub_id)
-            path = pub.unique_path_name()
-
-            used.add(path)
-            for _ns, p in merge_checker.get_related(source, path):
-                used.add(p)
-
-            # TODO also merge cites and other stats like author count
-            cites = len(pub.cit_paths or ())
-            cit_count.append(cites)
-            author_count.append(len(pub.authors))
-            pub_count += 1
+    pub_count = len(publications)
+    cit_count = [p["cites"] for p in publications]
+    author_count = [len(p["authors"]) for p in publications]
 
     cit_count.sort(reverse=True)
 
