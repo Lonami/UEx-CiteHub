@@ -102,7 +102,7 @@ class Scheduler:
 
     async def update_source_fields(self, username, sources):
         if not self._enabled:
-            return
+            return {"errors": ["crawling is disabled"]}
 
         errors = []
         values = await self._db.get_source_values(username)

@@ -31,7 +31,7 @@ async function save_details() {
         if (result.errors.length !== 0) {
             let error = 'Some errors occured:';
             for (let e of result.errors) {
-                error += `\nFailed to update ${e.namespace}.${e.key}: ${e.reason}`;
+                error += `\nFailed to update ${e.source}.${e.key}: ${e.reason}`;
             }
             last_error = {message: error};
         }
