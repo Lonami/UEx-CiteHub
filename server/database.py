@@ -271,6 +271,16 @@ class Database:
         return result
 
     @_transaction
+    async def update_source_values(self, username, sources, *, cursor=None):
+        for source, fields in sources.items():
+            cursor.execute(
+                "UPDATE Source SET values_json = ?, due = 0 WHERE owner = ? AND key = ?",
+                json.dumps(fields),
+                username,
+                source,
+            )
+
+    @_transaction
     async def save_crawler_step(self, source, step, *, cursor=None):
         self._insert(
             *(

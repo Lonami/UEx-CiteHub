@@ -80,52 +80,54 @@ class Scheduler:
 
     # TODO get/update source fields probably don't belong here (and with less confusing names?)
     async def get_source_fields(self, username):
-        fields = []
+        sources = []
         values = await self._db.get_source_values(username)
-        for key, crawler in CRAWLERS.items():
-            fields.append(
+        for source, crawler in CRAWLERS.items():
+            sources.append(
                 {
-                    "key": key,
-                    "fields": {
-                        k: {"description": desc, "value": values[key].get(k) or "",}
-                        for k, desc in crawler.fields().items()
+                    source: {
+                        key: {
+                            "description": desc,
+                            "value": values[source].get(key) or "",
+                        }
+                        for key, desc in crawler.fields().items()
                     },
                 }
             )
 
-        return fields
+        return sources
 
     async def update_source_fields(self, username, sources):
-        from aiohttp import web
-
-        raise web.HTTPForbidden()  # TODO
         if not self._enabled:
             return
 
         errors = []
-        for key, value in sources.items():
-            namespace, key = key.split(".")
-            value = value.strip()
+        values = await self._db.get_source_values(username)
+        changed_sources = set()
 
-            if value == self._sources[namespace].get(key):
-                _log.debug("source %s has not changed", key)
-                continue  # nothing to do
+        for source, fields in sources.items():
+            for key, value in fields.items():
+                if values[source].get(key) == value:
+                    _log.debug("source %s/%s/%s has not changed", username, source, key)
+                    continue
 
-            _log.info("updating source %s to %s", key, value)
+                try:
+                    CRAWLERS[source].validate_field(key, value)
+                except Exception as e:
+                    _log.exception("failed to set %s/%s/%s", username, source, key)
+                    errors.append({"source": source, "key": key, "reason": str(e)})
+                else:
+                    values[source][key] = value
+                    changed_sources.add(source)
 
-            # It is possible that we update the tasks and not the sources due
-            # to a race-condition, but very unlikely.
-            try:
-                self._tasks.set_field(namespace, key, value)
-            except Exception as e:
-                _log.exception("failed to set %s.%s", namespace, key)
-                errors.append(
-                    {"namespace": namespace, "key": key, "reason": str(e),}
-                )
-            else:
-                self._sources[namespace][key] = value
-
-        self.save()
+        await self._db.update_source_values(
+            username,
+            {
+                source: fields
+                for source, fields in values.items()
+                if source in changed_sources
+            },
+        )
         self._crawl_notify.set()
         return {"errors": errors}
 
