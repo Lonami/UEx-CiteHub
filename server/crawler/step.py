@@ -34,18 +34,26 @@ class Step:
     # the separate list. All in all it's a lot more cumbersome and error-prone, so instead
     # the types are violated for a bit here.
     def fix_authors(self):
+        # Use a map to avoid having duplicate authors, which is very likely and makes database
+        # insertions harder due to duplicate keys. It is possible to be smarter and try to merge
+        # duplicates here but it's not really worth the trouble.
+        authors = {}
         for pub in self.self_publications:
             for i, author in enumerate(pub.authors):
                 if isinstance(author, Author):
-                    self.authors.append(author)
-                    pub.authors[i] = author.unique_path_name()
+                    path = author.unique_path_name()
+                    authors[path] = author
+                    pub.authors[i] = path
 
         for citations in self.citations.values():
             for cit in citations:
                 for i, author in enumerate(cit.authors):
                     if isinstance(author, Author):
-                        self.authors.append(author)
-                        cit.authors[i] = author.unique_path_name()
+                        path = author.unique_path_name()
+                        authors[path] = author
+                        cit.authors[i] = path
+
+        self.authors.extend(authors.values())
 
     def stage_as_json(self):
         if self.stage is None:

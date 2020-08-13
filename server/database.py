@@ -314,6 +314,8 @@ class Database:
             ),
             cursor=cursor,
         )
+        # TODO what happens if one of the citations is our own?
+        # probably sqlite3.IntegrityError: UNIQUE constraint failed
         await self._insert(
             *(
                 Publication(
