@@ -49,10 +49,10 @@ class Merger:
                     await asyncio.wait_for(self._force_check.wait(), AUTO_DELAY)
                 except asyncio.TimeoutError:
                     pass
-                else:
-                    self._force_check.clear()
 
                 _log.info("merging data")
+                # Set the flag so that if someone else tries it will fail
+                self._force_check.set()
                 await self._merge()
                 _log.info("merged data")
         except asyncio.CancelledError:
