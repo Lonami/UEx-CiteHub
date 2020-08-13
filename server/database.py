@@ -322,6 +322,7 @@ class Database:
                     cursor=cursor,
                 )
 
+    @_transaction
     async def save_crawler_step(self, source, step, *, cursor=None):
         await self._insert(
             *(
