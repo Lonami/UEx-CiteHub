@@ -19,7 +19,7 @@ from typing import Generator, List, Tuple
 import logging
 
 from ...storage import Author, Publication
-from ..task import Task
+from ..crawler import Crawler
 from dataclasses import dataclass
 from datetime import datetime
 from ..step import Step
@@ -276,7 +276,7 @@ class Stage:
         offset: int = 0
 
 
-class CrawlAcademics(Task):
+class CrawlAcademics(Crawler):
     Stage = Stage
 
     @classmethod

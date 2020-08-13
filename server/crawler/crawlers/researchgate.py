@@ -16,7 +16,7 @@ import bs4
 import logging
 from typing import Generator, List
 from ...storage import Author, Publication
-from ..task import Task
+from ..crawler import Crawler
 from dataclasses import dataclass
 from ..step import Step
 
@@ -135,7 +135,7 @@ class Stage:
         cit_offset: int = 0
 
 
-class CrawlResearchGate(Task):
+class CrawlResearchGate(Crawler):
     Stage = Stage
 
     @classmethod

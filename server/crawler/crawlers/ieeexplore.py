@@ -4,7 +4,7 @@ https://ieeexplore.ieee.org/
 import urllib.parse
 from typing import Generator, List
 from ...storage import Author, Publication
-from ..task import Task
+from ..crawler import Crawler
 from dataclasses import dataclass
 from ..step import Step
 
@@ -184,7 +184,7 @@ class Stage:
         missing_pub_ids: List[str]
 
 
-class CrawlExplore(Task):
+class CrawlExplore(Crawler):
     Stage = Stage
 
     @classmethod

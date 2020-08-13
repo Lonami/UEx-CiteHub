@@ -16,7 +16,7 @@ from typing import Generator, List, Tuple, Optional
 
 from ...storage import Author, Publication
 from ..step import Step
-from ..task import Task
+from ..crawler import Crawler
 
 _log = logging.getLogger(__name__)
 
@@ -198,7 +198,7 @@ class Stage:
         cit_offset: int = 0
 
 
-class CrawlArnetMiner(Task):
+class CrawlArnetMiner(Crawler):
     Stage = Stage
 
     @classmethod

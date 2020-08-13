@@ -13,7 +13,7 @@ import urllib.parse
 import json
 from typing import Generator, Tuple, Optional, List
 from ...storage import Author, Publication
-from ..task import Task
+from ..crawler import Crawler
 from dataclasses import dataclass
 from ..step import Step
 
@@ -135,7 +135,7 @@ class Stage:
         cursor: Optional[str] = None
 
 
-class CrawlDimensions(Task):
+class CrawlDimensions(Crawler):
     Stage = Stage
 
     @classmethod

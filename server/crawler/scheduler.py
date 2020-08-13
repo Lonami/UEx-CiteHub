@@ -10,7 +10,7 @@ from pathlib import Path
 
 from aiohttp import ClientSession
 
-from .task import StepException
+from .crawler import StepException
 from .crawlers import CRAWLERS
 from .. import utils
 

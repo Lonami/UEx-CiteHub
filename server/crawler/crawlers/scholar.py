@@ -10,7 +10,7 @@ import aiohttp
 import bs4
 
 from ...storage import Author, Publication
-from ..task import Task
+from ..crawler import Crawler
 from dataclasses import dataclass
 from ..step import Step
 
@@ -358,7 +358,7 @@ class Stage:
         cit_url: str
 
 
-class CrawlScholar(Task):
+class CrawlScholar(Crawler):
     Stage = Stage
 
     @classmethod
