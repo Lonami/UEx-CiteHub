@@ -1,17 +1,19 @@
 import abc
 import random
-import time
 import logging
 from typing import Mapping
-from dataclasses import is_dataclass
+from dataclasses import is_dataclass, asdict
 from .step import Step
 from ..storage import Storage
 
 
-DELAY_JITTER_PERCENT = 0.05
 _log = logging.getLogger(__name__)
 
 ERROR_DELAYS = [1, 10, 60, 10 * 60, 60 * 60, 24 * 60 * 60]
+
+
+class NotReadyException(Exception):
+    pass
 
 
 class StepException(Exception):
@@ -76,13 +78,16 @@ class Task(abc.ABC):
 
         # Don't bother stepping unless all the values exist in the required fields
         if not all(values.get(k) for k in cls.fields()):
-            return None, int(time.time()) + 24 * 60 * 60
+            raise NotReadyException
 
-        stage_index = state.pop("_index")
-        for field in dir(cls.Stage):
-            Field = getattr(cls.Stage, field)
-            if is_dataclass(Field) and Field.INDEX == stage_index:
-                stage = Field(**state)
+        if state is None:
+            stage = cls.initial_stage()
+        else:
+            stage_index = state.pop("_index")
+            for field in dir(cls.Stage):
+                Field = getattr(cls.Stage, field)
+                if is_dataclass(Field) and Field.INDEX == stage_index:
+                    stage = Field(**state)
 
         # TODO how to handle error in completely-stateless?
         error = 0
@@ -99,8 +104,7 @@ class Task(abc.ABC):
                 delay,
             )
 
-            due = time.time() + delay
-            raise StepException(due)
+            raise StepException(delay)
         else:
             error = 0
 
@@ -111,9 +115,4 @@ class Task(abc.ABC):
         # Address that here before saving anything so everything has the right types.
         step.fix_authors()
 
-        # TODO save step.authors, update user_pub_ids, self_publications, citations paths, stage
-
-        jitter_range = step.delay * DELAY_JITTER_PERCENT
-        jitter = random.uniform(-jitter_range, jitter_range)
-        due = time.time() + step.delay + jitter
-        return step, due
+        return step

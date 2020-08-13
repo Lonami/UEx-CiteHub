@@ -48,12 +48,15 @@ class Scheduler:
                 if source.task_json:
                     state = json.loads(source.task_json)
                 else:
-                    state = CRAWLERS[source.key].initial_stage()
+                    state = None
 
                 # TODO except step error
                 step, due = await CRAWLERS[source.key].step(
                     values=values, state=state, session=self._client_session
                 )
+
+                await self._db.save_crawler_step(step)
+
                 # TODO begin transaction to save the produced values in the step and due in a transaction
                 _log.debug(
                     "stepped source task %s/%s, next at %d",

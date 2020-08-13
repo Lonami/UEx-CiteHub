@@ -1,19 +1,36 @@
 from aiosqlite import Connection
 from collections import namedtuple
+from dataclasses import asdict
+import itertools
 import sqlite3
 import functools
 import json
-
+from .storage import Publication as StepPublication
 
 DB_VERSION = 1
 Version = namedtuple("Version", "version")
 User = namedtuple("User", "username password salt token")
 Source = namedtuple("Source", "owner key values_json task_json due")
+Author = namedtuple(
+    "Author", "owner source path full_name id first_name last_name extra_json"
+)
+Publication = namedtuple(
+    "Publication", "owner source path by_self name id year ref extra_json"
+)
+PublicationAuthors = namedtuple(
+    "PublicationAuthors", "owner source pub_path author_path"
+)
+Cites = namedtuple("Cites", "owner source pub_path cited_by")
 
 
 def _transaction(func):
     @functools.wraps(func)
     async def wrapped(self, *args, **kwargs):
+        if "cursor" in kwargs:
+            # Already in a transaction
+            await func(self, *args, **kwargs)
+            return
+
         async with self._db.execute("BEGIN") as cursor:
             try:
                 await func(self, *args, cursor=cursor, **kwargs)
@@ -24,6 +41,15 @@ def _transaction(func):
                 await cursor.execute("COMMIT")
 
     return wrapped
+
+
+def _adapt_step_publications(step):
+    for pub in step.self_publications:
+        yield pub, 1
+
+    for citations in step.citations.values():
+        for cit in citations:
+            yield cit, 0
 
 
 class Select:
@@ -127,6 +153,7 @@ class Database:
             owner TEXT,
             source TEXT,
             path TEXT,
+            by_self INTEGER NOT NULL,
             name TEXT NOT NULL,
             id TEXT,
             year INTEGER,
@@ -154,7 +181,7 @@ class Database:
             """CREATE TABLE Cites (
             owner TEXT,
             source TEXT,
-            pub TEXT,
+            pub_path TEXT,
             cited_by TEXT,
             FOREIGN KEY(owner) REFERENCES User(username),
             FOREIGN KEY(source) REFERENCES Source(key),
@@ -242,6 +269,77 @@ class Database:
             async for source in select:
                 result[source.key] = json.loads(source.values_json)
         return result
+
+    @_transaction
+    async def save_crawler_step(self, source, step, *, cursor=None):
+        self._insert(
+            *(
+                Author(
+                    owner=source.owner,
+                    source=source.key,
+                    path=author.unique_path_name(),
+                    full_name=author.full_name,
+                    id=author.id,
+                    first_name=author.first_name,
+                    last_name=author.last_name,
+                    extra_json=json.dumps(author.extra),
+                )
+                for author in step.authors
+            ),
+            cursor=cursor,
+        )
+        self._insert(
+            *(
+                Publication(
+                    owner=source.owner,
+                    source=source.key,
+                    path=pub.unique_path_name(),
+                    by_self=by_self,
+                    name=pub.name,
+                    id=pub.id,
+                    year=pub.year,
+                    ref=pub.ref,
+                    extra_json=json.dumps(pub.extra),
+                )
+                for pub, by_self in _adapt_step_publications(step)
+            ),
+            cursor=cursor,
+        )
+        for pub, _ in _adapt_step_publications(step):
+            self._insert(
+                *(
+                    PublicationAuthors(
+                        owner=source.owner,
+                        source=source.key,
+                        pub_path=pub.unique_path_name(),
+                        author_path=author_path,
+                    )
+                    for author_path in pub.authors
+                ),
+                cursor=cursor,
+            )
+        for cites_pub_id, citations in step.citations.items():
+            # TODO bad (maybe the step should have a method to get all the tuples to insert?)
+            pub_path = StepPublication(name="", id=cites_pub_id).unique_path_name()
+            self._insert(
+                *(
+                    Cites(
+                        owner=source.owner,
+                        source=source.key,
+                        pub_path=pub_path,
+                        cited_by=cit.unique_path_name(),
+                    )
+                    for cit in citations
+                ),
+                cursor=cursor,
+            )
+        cursor.execute(
+            "UPDATE Source SET task_json = ?, due = ? WHERE owner = ? AND key = ?",
+            step.stage_as_json(),
+            step.due(),
+            source.owner,
+            source.key,
+        )
 
 
 if __name__ == "__main__":
