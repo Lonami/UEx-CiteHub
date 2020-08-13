@@ -30,6 +30,10 @@ class Scheduler:
         try:
             while True:
                 source = await self._db.next_source_task()
+                if source is None:
+                    await self._wait_notify(MAX_SLEEP)
+                    continue
+
                 delay = source.due - time.time()
                 if delay > MAX_SLEEP:
                     await self._wait_notify(MAX_SLEEP)
