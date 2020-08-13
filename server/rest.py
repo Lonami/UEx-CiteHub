@@ -32,6 +32,38 @@ def _require_user(func):
     return wrapped
 
 
+def _require_json_payload(payload_check=None, **key_checks):
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapped(request, *args, **kwargs):
+            try:
+                payload = await request.json()
+            except json.JSONDecodeError:
+                raise web.HTTPBadRequest()
+
+            if payload_check:
+                if not payload_check(payload):
+                    raise web.HTTPBadRequest()
+
+            for key, check in key_checks.items():
+                if key not in payload:
+                    raise web.HTTPBadRequest()
+
+                value = payload[key]
+                if isinstance(check, type):
+                    if not isinstance(value, check):
+                        raise web.HTTPBadRequest()
+                else:
+                    if not check(value):
+                        raise web.HTTPBadRequest()
+
+            return await func(request, *args, payload=payload, **kwargs)
+
+        return wrapped
+
+    return decorator
+
+
 @_require_user
 async def get_metrics(request, username):
     publications = await request.app["db"].get_publications(username)
@@ -101,10 +133,11 @@ async def get_user_profile(request, username):
 
 
 @_require_user
-async def update_user_profile(request, username):
-    result = await request.app["scheduler"].update_source_fields(
-        username, await request.json()
-    )
+@_require_json_payload(
+    lambda p: isinstance(p, dict) and all(isinstance(v, dict) for v in p.values())
+)
+async def update_user_profile(request, username, payload):
+    result = await request.app["scheduler"].update_source_fields(username, payload)
     return web.json_response(result)
 
 
@@ -114,12 +147,14 @@ async def force_merge(request, username):
     return web.json_response({"ok": ok})
 
 
-async def register_user(request):
-    details = await request.json()
-    request.app["auth"].check_whitelist(details["username"])
+@_require_json_payload(
+    username=str, password=str,
+)
+async def register_user(request, payload):
+    request.app["auth"].check_whitelist(payload["username"])
     request.app["auth"].apply_rate_limit(request)
     token = await request.app["users"].register(
-        details["username"], details["password"]
+        payload["username"], payload["password"]
     )
     resp = web.json_response(True)
     resp.set_cookie(
@@ -131,10 +166,12 @@ async def register_user(request):
     return resp
 
 
-async def login_user(request):
-    details = await request.json()
+@_require_json_payload(
+    username=str, password=str,
+)
+async def login_user(request, payload):
     request.app["auth"].apply_rate_limit(request)
-    token = await request.app["users"].login(details["username"], details["password"])
+    token = await request.app["users"].login(payload["username"], payload["password"])
     resp = web.json_response(True)
     resp.set_cookie(
         AUTH_TOKEN_COOKIE,
@@ -163,11 +200,12 @@ async def delete_user(request, username):
 
 
 @_require_user
-async def update_password(request, username):
-    # TODO it's 500 error to not receive json which shouldn't be (here and everywhere using json)
-    details = await request.json()
+@_require_json_payload(
+    old_password=str, new_password=str,
+)
+async def update_password(request, username, payload):
     result = await request.app["users"].change_password(
-        username, details["old_password"], details["new_password"]
+        username, payload["old_password"], payload["new_password"]
     )
     return web.json_response(result)
 
