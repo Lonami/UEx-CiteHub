@@ -139,7 +139,7 @@ class Database:
             values_json TEXT,
             task_json TEXT,
             due INTEGER NOT NULL,
-            FOREIGN KEY(owner) REFERENCES User(username),
+            FOREIGN KEY(owner) REFERENCES User(username) ON DELETE CASCADE,
             PRIMARY KEY(owner, key)
         ) WITHOUT ROWID"""
         )
@@ -153,7 +153,7 @@ class Database:
             first_name TEXT,
             last_name TEXT,
             extra_json TEXT,
-            FOREIGN KEY(owner) REFERENCES User(username),
+            FOREIGN KEY(owner) REFERENCES User(username) ON DELETE CASCADE,
             FOREIGN KEY(owner, source) REFERENCES Source(owner, key),
             PRIMARY KEY(owner, source, path)
         ) WITHOUT ROWID"""
@@ -169,7 +169,7 @@ class Database:
             year INTEGER,
             ref TEXT,
             extra_json TEXT,
-            FOREIGN KEY(owner) REFERENCES User(username),
+            FOREIGN KEY(owner) REFERENCES User(username) ON DELETE CASCADE,
             FOREIGN KEY(owner, source) REFERENCES Source(owner, key),
             PRIMARY KEY(owner, source, path)
         ) WITHOUT ROWID"""
@@ -180,7 +180,7 @@ class Database:
             source TEXT,
             pub_path TEXT,
             author_path TEXT,
-            FOREIGN KEY(owner) REFERENCES User(username),
+            FOREIGN KEY(owner) REFERENCES User(username) ON DELETE CASCADE,
             FOREIGN KEY(owner, source) REFERENCES Source(owner, key),
             FOREIGN KEY(owner, source, pub_path) REFERENCES Publication(owner, source, path),
             FOREIGN KEY(owner, source, author_path) REFERENCES Author(owner, source, path),
@@ -193,7 +193,7 @@ class Database:
             source TEXT,
             pub_path TEXT,
             cited_by TEXT,
-            FOREIGN KEY(owner) REFERENCES User(username),
+            FOREIGN KEY(owner) REFERENCES User(username) ON DELETE CASCADE,
             FOREIGN KEY(owner, source) REFERENCES Source(owner, key),
             FOREIGN KEY(owner, source, pub_path) REFERENCES Publication(owner, source, path),
             FOREIGN KEY(owner, source, cited_by) REFERENCES Publication(owner, source, path),
@@ -208,7 +208,7 @@ class Database:
             pub_a TEXT,
             pub_b TEXT,
             similarity REAL NOT NULL,
-            FOREIGN KEY(owner) REFERENCES User(username),
+            FOREIGN KEY(owner) REFERENCES User(username) ON DELETE CASCADE,
             FOREIGN KEY(owner, source_a) REFERENCES Source(owner, key),
             FOREIGN KEY(owner, source_b) REFERENCES Source(owner, key),
             FOREIGN KEY(owner, source_a, pub_a) REFERENCES Publication(owner, source, path),
