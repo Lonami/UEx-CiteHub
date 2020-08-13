@@ -12,10 +12,6 @@ _log = logging.getLogger(__name__)
 ERROR_DELAYS = [1, 10, 60, 10 * 60, 60 * 60, 24 * 60 * 60]
 
 
-class NotReadyException(Exception):
-    pass
-
-
 class StepException(Exception):
     def __init__(self, due):
         super().__init__()
@@ -78,7 +74,7 @@ class Task(abc.ABC):
 
         # Don't bother stepping unless all the values exist in the required fields
         if not all(values.get(k) for k in cls.fields()):
-            raise NotReadyException
+            return Step(delay=24 * 60 * 60, stage=None)
 
         if state is None:
             stage = cls.initial_stage()

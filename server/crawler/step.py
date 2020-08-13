@@ -48,6 +48,9 @@ class Step:
                         cit.authors[i] = author.unique_path_name()
 
     def stage_as_json(self):
+        if self.stage is None:
+            return json.dumps(None)
+
         data = asdict(self.stage)
         data["_index"] = self.stage.INDEX
         return json.dumps(data)

@@ -10,6 +10,7 @@ from pathlib import Path
 
 from aiohttp import ClientSession
 
+from .task import StepException
 from .crawlers import CRAWLERS
 from .. import utils
 
@@ -54,20 +55,22 @@ class Scheduler:
                 else:
                     state = None
 
-                # TODO except step error
-                step, due = await CRAWLERS[source.key].step(
-                    values=values, state=state, session=self._client_session
-                )
-
-                await self._db.save_crawler_step(step)
-
-                # TODO begin transaction to save the produced values in the step and due in a transaction
-                _log.debug(
-                    "stepped source task %s/%s, next at %d",
-                    source.owner,
-                    source.key,
-                    due,
-                )
+                try:
+                    step = await CRAWLERS[source.key].step(
+                        values=values, state=state, session=self._client_session
+                    )
+                except StepException:
+                    _log.exception(
+                        "failed to step source task %s/%s", source.owner, source.key
+                    )
+                else:
+                    await self._db.save_crawler_step(source, step)
+                    _log.debug(
+                        "stepped source task %s/%s, next at %d",
+                        source.owner,
+                        source.key,
+                        step.due(),
+                    )
         except asyncio.CancelledError:
             raise
         except Exception:
