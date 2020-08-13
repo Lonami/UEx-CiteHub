@@ -27,18 +27,10 @@ def _check_password(password):
 
 
 class Users:
-    def __init__(self, root):
-        self._file = root / "users.json"
+    def __init__(self, db):
+        self._db = db
 
-        # {username: {salt, password, token}}
-        self._users = {}
-        utils.try_load_json(self._users, self._file)
-
-        self._token_to_user = {
-            v["token"]: u for u, v in self._users.items() if v["token"]
-        }
-
-    def register(self, username, password):
+    async def register(self, username, password):
         if len(username) > MAX_DETAILS_LENGTH:
             raise web.HTTPBadRequest(
                 reason=f"username must be {MAX_DETAILS_LENGTH} characters long or less"
@@ -49,84 +41,61 @@ class Users:
                 reason=f"username must use lowercase ascii letters only"
             )
 
-        if username in self._users:
+        if await self._db.has_user(username=username):
             raise web.HTTPBadRequest(reason=f"username is already occupied")
 
         _check_password(password)
 
-        salt, password = utils.hash_user_pass(password)
-        token = self._gen_token()
-        self._users[username] = {
-            "salt": salt,
-            "password": password,
-            "token": token,
-        }
-        self._token_to_user[token] = username
-        self._save()
+        password, salt = utils.hash_user_pass(password)
+        token = await self._gen_token()
+        await self._db.register_user(
+            username=username, password=password, salt=salt, token=token,
+        )
         return token
 
-    def login(self, username, password):
+    async def login(self, username, password):
         bad_info = web.HTTPBadRequest(reason="invalid username or password")
 
-        details = self._users.get(username)
+        details = await self._db.get_user_password(username=username)
         if not details:
             raise bad_info
 
-        _, password = utils.hash_user_pass(password, details["salt"])
-        if password != details["password"]:
+        saved_password, salt = details
+        password, _ = utils.hash_user_pass(password, salt)
+
+        if password != saved_password:
             raise bad_info
 
-        token = self._gen_token()
-        details["token"] = token
-        self._users[username] = details
-        self._token_to_user[token] = username
-        self._save()
+        token = await self._gen_token()
+        await self._db.login_user(username=username, token=token)
         return token
 
-    def logout(self, token):
-        user = self._token_to_user.pop(token, None)
-        if not user:
-            return False
+    async def logout(self, username):
+        return await self._db.logout_user(username=username)
 
-        self._users[user]["token"] = None
-        self._save()
-        return True
+    async def delete(self, username):
+        return await self._db.delete_user(username=username)
 
-    def delete(self, token):
-        user = self._token_to_user.pop(token, None)
-        if not user:
-            return False
+    async def username_of(self, *, token):
+        return await self._db.get_username(token=token)
 
-        del self._users[user]
-        self._save()
-        return True
+    async def change_password(self, username, old_password, new_password):
+        details = await self._db.get_user_password(username=username)
 
-    def username_of(self, *, token):
-        return self._token_to_user.get(token)
-
-    def change_password(self, old_password, new_password, *, token):
-        username = self._token_to_user.get(token)
-        if not username:
-            raise web.HTTPForbidden()
-
-        details = self._users[username]
-        _, password = utils.hash_user_pass(old_password, details["salt"])
-        if password != details["password"]:
+        password, _ = utils.hash_user_pass(*details)
+        if password != details[0]:
             raise web.HTTPBadRequest(reason="old password did not match")
 
         _check_password(new_password)
 
-        salt, password = utils.hash_user_pass(new_password)
-        details["salt"] = salt
-        details["password"] = password
-        self._save()
+        password, salt = utils.hash_user_pass(new_password)
+        await self._db.update_user_password(
+            username=username, password=password, salt=salt
+        )
         return True
 
-    def _gen_token(self):
+    async def _gen_token(self):
         while True:
             token = base64.b64encode(os.urandom(15)).decode("ascii")
-            if token not in self._token_to_user:
+            if (await self._db.get_username(token=token)) is None:
                 return token
-
-    def _save(self):
-        utils.save_json(self._users, self._file)

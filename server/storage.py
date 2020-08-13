@@ -39,9 +39,6 @@ class Publication:
     authors: Optional[List[str]] = None
     year: Optional[int] = None
     ref: Optional[str] = None
-    cit_paths: Optional[
-        List[str]
-    ] = None  # unique_path_name of publications citing this source
     extra: Optional[dict] = None
 
     def unique_path_name(self) -> str:

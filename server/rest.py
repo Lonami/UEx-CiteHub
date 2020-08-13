@@ -2,6 +2,7 @@ import itertools
 import uuid
 import json
 import statistics
+import functools
 from pathlib import Path
 
 from aiohttp import web
@@ -13,29 +14,31 @@ MAX_I_INDEX = 20
 AUTH_TOKEN_COOKIE = "token"
 
 
-async def get_metrics(request):
-    # TODO much repetition with get_publications
-    pub_count = 0
-    cit_count = []
-    author_count = []
+def _require_user(func):
+    """
+    Decorator to mark functions that need the user to be logged in.
+    The `username` argument will be provided.
+    """
 
-    used = set()
-    merge_checker = request.app["merger"].checker()
-    storages = request.app["crawler"].storages()
-    for source, storage in storages.items():
-        for pub_id in storage.user_pub_ids:
-            pub = storage.load_pub(pub_id)
-            path = pub.unique_path_name()
+    @functools.wraps(func)
+    async def wrapped(request, *args, **kwargs):
+        token = request.cookies.get(AUTH_TOKEN_COOKIE)
+        username = await request.app["users"].username_of(token=token)
+        if username:
+            return await func(request, *args, username=username, **kwargs)
+        else:
+            raise web.HTTPForbidden()
 
-            used.add(path)
-            for _ns, p in merge_checker.get_related(source, path):
-                used.add(p)
+    return wrapped
 
-            # TODO also merge cites and other stats like author count
-            cites = len(pub.cit_paths or ())
-            cit_count.append(cites)
-            author_count.append(len(pub.authors))
-            pub_count += 1
+
+@_require_user
+async def get_metrics(request, username):
+    publications = await request.app["db"].get_publications(username)
+
+    pub_count = len(publications)
+    cit_count = [p["cites"] for p in publications]
+    author_count = [len(p["authors"]) for p in publications]
 
     cit_count.sort(reverse=True)
 
@@ -82,65 +85,31 @@ async def get_metrics(request):
     )
 
 
-async def get_publications(request):
-    publications = []
-
-    used = set()
-    merge_checker = request.app["merger"].checker()
-    storages = request.app["crawler"].storages()
-    for source, storage in storages.items():
-        for pub_id in storage.user_pub_ids:
-            pub = storage.load_pub(pub_id)
-            path = pub.unique_path_name()
-
-            sources = [{"key": source, "ref": pub.ref,}]
-            used.add(path)
-            for ns, p in merge_checker.get_related(source, path):
-                # TODO having to load each related publication is quite expensive
-                # probably the entire storage should be in memory AND disk because
-                # it's not that much data (even less if "extra" is not in memory since
-                # we don't use it).
-                sources.append({"key": ns, "ref": storages[ns].load_pub(path=p).ref})
-                used.add(p)
-
-            # TODO also merge cites and other stats like author count
-            cites = len(pub.cit_paths or ())
-            # TODO this should be smarter and if anyhas missing data (e.g. year) use a different source
-            publications.append(
-                {
-                    "sources": sources,
-                    "name": pub.name,
-                    "authors": [
-                        {"full_name": storage.load_author(a).full_name}
-                        for a in pub.authors
-                    ],
-                    "cites": cites,
-                    "year": pub.year,
-                }
-            )
-
-    return web.json_response(publications)
+@_require_user
+async def get_publications(request, username):
+    return web.json_response(await request.app["db"].get_publications(username))
 
 
-def get_user_profile(request):
-    # TODO return the specific profile (and perform authcheck in most other methods too)
-    token = request.cookies.get(AUTH_TOKEN_COOKIE)
-    username = request.app["users"].username_of(token=token)
-    if not username:
-        raise web.HTTPForbidden()
-
+@_require_user
+async def get_user_profile(request, username):
     return web.json_response(
-        {"username": username, "sources": request.app["crawler"].get_source_fields(),}
+        {
+            "username": username,
+            "sources": await request.app["scheduler"].get_source_fields(username),
+        }
     )
 
 
-@utils.locked
-async def update_user_profile(request):
-    result = request.app["crawler"].update_source_fields(await request.json())
+@_require_user
+async def update_user_profile(request, username):
+    result = await request.app["scheduler"].update_source_fields(
+        username, await request.json()
+    )
     return web.json_response(result)
 
 
-async def force_merge(request):
+@_require_user
+async def force_merge(request, username):
     ok = request.app["merger"].force_merge()
     return web.json_response({"ok": ok})
 
@@ -149,7 +118,9 @@ async def register_user(request):
     details = await request.json()
     request.app["auth"].check_whitelist(details["username"])
     request.app["auth"].apply_rate_limit(request)
-    token = request.app["users"].register(details["username"], details["password"])
+    token = await request.app["users"].register(
+        details["username"], details["password"]
+    )
     resp = web.json_response(True)
     resp.set_cookie(
         AUTH_TOKEN_COOKIE,
@@ -163,7 +134,7 @@ async def register_user(request):
 async def login_user(request):
     details = await request.json()
     request.app["auth"].apply_rate_limit(request)
-    token = request.app["users"].login(details["username"], details["password"])
+    token = await request.app["users"].login(details["username"], details["password"])
     resp = web.json_response(True)
     resp.set_cookie(
         AUTH_TOKEN_COOKIE,
@@ -174,29 +145,29 @@ async def login_user(request):
     return resp
 
 
-def logout_user(request):
-    token = request.cookies.get(AUTH_TOKEN_COOKIE)
-    result = request.app["users"].logout(token)
+@_require_user
+async def logout_user(request, username):
+    result = await request.app["users"].logout(username)
     resp = web.json_response(result)
     resp.del_cookie(AUTH_TOKEN_COOKIE)
     return resp
 
 
-def delete_user(request):
-    token = request.cookies.get(AUTH_TOKEN_COOKIE)
-    result = request.app["users"].delete(token)
+@_require_user
+async def delete_user(request, username):
+    result = await request.app["users"].delete(username)
     # TODO remove only the data related to us
     resp = web.json_response(result)
     resp.del_cookie(AUTH_TOKEN_COOKIE)
     return resp
 
 
-async def update_password(request):
+@_require_user
+async def update_password(request, username):
     # TODO it's 500 error to not receive json which shouldn't be (here and everywhere using json)
     details = await request.json()
-    token = request.cookies.get(AUTH_TOKEN_COOKIE)
-    result = request.app["users"].change_password(
-        details["old_password"], details["new_password"], token=token
+    result = await request.app["users"].change_password(
+        username, details["old_password"], details["new_password"]
     )
     return web.json_response(result)
 

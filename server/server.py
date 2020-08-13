@@ -13,10 +13,11 @@ import aiohttp
 from aiohttp import web
 
 from . import helpers, rest
-from .crawler import Crawler
+from .crawler import Scheduler
 from .merger import Merger
 from .users import Users
 from .auth import Auth
+from .database import Database
 
 
 def serve_index(request):
@@ -49,19 +50,16 @@ class Server:
 
     async def _run(self):
         cfg = self._app["config"]
-        root = Path(cfg["storage"]["root"])
-        self._app["users"] = Users(root)
+        self._app["db"] = Database(self._app["config"]["storage"]["path"])
+        self._app["users"] = Users(self._app["db"])
         self._app["auth"] = Auth(
             fail_retry_delay=cfg["auth"].get("fail_retry_delay"),
             csv_whitelist=cfg["auth"].get("whitelist"),
         )
-
-        # TODO there will need to be a crawler and merger per user..
-        self._app["crawler"] = Crawler(
-            root, enabled=cfg["storage"].getboolean("crawler"),
+        self._app["scheduler"] = Scheduler(
+            self._app["db"], enabled=cfg["storage"].getboolean("crawler"),
         )
-
-        self._app["merger"] = Merger(root, self._app["crawler"].storages())
+        self._app["merger"] = Merger(self._app["db"])
 
         # Have to do this inside a coroutine to keep `aiohttp` happy
         runner = web.AppRunner(
@@ -78,7 +76,7 @@ class Server:
         ]
 
         try:
-            async with self._app["crawler"], self._app["merger"]:
+            async with self._app["db"], self._app["scheduler"], self._app["merger"]:
                 print("Running on:")
                 for site in sites:
                     await site.start()

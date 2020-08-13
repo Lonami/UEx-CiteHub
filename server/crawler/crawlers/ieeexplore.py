@@ -2,7 +2,7 @@
 https://ieeexplore.ieee.org/
 """
 import urllib.parse
-from typing import Generator
+from typing import Generator, List
 from ...storage import Author, Publication
 from ..task import Task
 from dataclasses import dataclass
@@ -181,7 +181,7 @@ class Stage:
     @dataclass
     class FetchCitations:
         INDEX = 1
-        offset: int = 0
+        missing_pub_ids: List[str]
 
 
 class CrawlExplore(Task):
@@ -203,36 +203,37 @@ class CrawlExplore(Task):
             "authors of one of the publications, and copy that final URL."
         }
 
-    def set_field(self, key, value):
+    @classmethod
+    def validate_field(self, key, value):
         assert key == "url", f"invalid key {key}"
-        self._storage.user_author_id = None if not value else author_id_from_url(value)
-        self._storage.user_pub_ids = []
-        self._due = 0
+        author_id_from_url(value)  # will raise (fail validation) on bad value
 
-    async def _step(self, stage, session) -> Step:
-        if not self._storage.user_author_id:
-            return Step(delay=24 * 60 * 60, stage=None)
+    @classmethod
+    async def _step(cls, values, stage, session) -> Step:
+        user_author_id = author_id_from_url(values["url"])
 
         if isinstance(stage, Stage.FetchPublications):
-            data = await fetch_author(session, self._storage.user_author_id)
+            data = await fetch_author(session, user_author_id)
             self_publications = list(adapt_publications(data))
             return Step(
                 delay=10 * 60,
-                stage=Stage.FetchCitations(),
+                stage=Stage.FetchCitations(
+                    missing_pub_ids=[p.id for p in self_publications],
+                ),
                 self_publications=self_publications,
             )
 
         # Fetching publications
         elif isinstance(stage, Stage.FetchCitations):
-            if stage.offset >= len(self._storage.user_pub_ids):
-                return Step(delay=24 * 60 * 60, stage=self.initial_stage(),)
+            if not stage.missing_pub_ids:
+                return Step(delay=24 * 60 * 60, stage=cls.initial_stage())
 
-            pub_id = self._storage.user_pub_ids[stage.offset]
+            pub_id = stage.missing_pub_ids[0]
             data = await fetch_citations(session, pub_id)
             citations = list(adapt_citations(data))
 
             return Step(
                 delay=10 * 60,
-                stage=Stage.FetchCitations(offset=stage.offset + 1),
+                stage=Stage.FetchCitations(missing_pub_ids=stage.missing_pub_ids[1:]),
                 citations={pub_id: citations},
             )

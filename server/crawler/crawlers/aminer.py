@@ -12,7 +12,7 @@ The network tab in web browsers displays a lot of interesting XHR.
 import urllib.parse
 import logging
 from dataclasses import dataclass
-from typing import Generator, List, Tuple
+from typing import Generator, List, Tuple, Optional
 
 from ...storage import Author, Publication
 from ..step import Step
@@ -188,12 +188,13 @@ class Stage:
     @dataclass
     class FetchPublications:
         INDEX = 0
+        known_pub_ids: Optional[List[str]] = None
         offset: int = 0
 
     @dataclass
     class FetchCitations:
         INDEX = 1
-        pub_offset: int = 0
+        missing_pub_ids: List[str]
         cit_offset: int = 0
 
 
@@ -215,50 +216,46 @@ class CrawlArnetMiner(Task):
             "your profile. Click on it when you find it and copy the URL."
         }
 
-    def set_field(self, key, value):
+    @classmethod
+    def validate_field(self, key, value):
         assert key == "url", f"invalid key {key}"
-        self._storage.user_author_id = None if not value else author_id_from_url(value)
-        self._storage.user_pub_ids = []
-        self._due = 0
+        author_id_from_url(value)  # will raise (fail validation) on bad value
 
-    async def _step(self, stage, session) -> Step:
-        if not self._storage.user_author_id:
-            return Step(delay=24 * 60 * 60, stage=None)
-
+    @classmethod
+    async def _step(cls, values, stage, session) -> Step:
+        user_author_id = author_id_from_url(values["url"])
         miner = ArnetMiner(session)
 
         if isinstance(stage, Stage.FetchPublications):
-            data = await miner.search_publications(
-                self._storage.user_author_id, stage.offset
-            )
+            data = await miner.search_publications(user_author_id, stage.offset)
 
             pub_count = data["keyValues"]["total"]
             self_publications = list(adapt_publications(data))
+            known_pub_ids = (stage.known_pub_ids or []) + [
+                # Don't bother saving those without citations to save on requests
+                p.id
+                for p in self_publications
+                if p.extra["cit-count"] != 0
+            ]
 
             offset = stage.offset + len(self_publications)
             if offset >= pub_count or not self_publications:
                 delay = 30 * 60
-                stage = Stage.FetchCitations()
+                stage = Stage.FetchCitations(missing_pub_ids=known_pub_ids)
             else:
                 delay = 5 * 60
-                stage = Stage.FetchPublications(offset=offset)
+                stage = Stage.FetchPublications(
+                    known_pub_ids=known_pub_ids, offset=offset
+                )
 
             return Step(delay=delay, stage=stage, self_publications=self_publications,)
 
         elif isinstance(stage, Stage.FetchCitations):
-            if stage.pub_offset >= len(self._storage.user_pub_ids):
+            if not stage.missing_pub_ids:
                 _log.debug("checked all publications")
-                return Step(delay=24 * 60 * 60, stage=self.initial_stage(),)
+                return Step(delay=24 * 60 * 60, stage=cls.initial_stage())
 
-            pub_id = self._storage.user_pub_ids[stage.pub_offset]
-            pub = self._storage.load_pub(pub_id)
-
-            if pub.extra["cit-count"] == 0:
-                _log.debug("no citations to check for this publication")
-                return Step(
-                    delay=1, stage=Stage.FetchCitations(pub_offset=stage.pub_offset + 1)
-                )
-
+            pub_id = stage.missing_pub_ids[0]
             data = await miner.search_cited_by(pub_id, stage.cit_offset)
 
             # The listed citations are less than the found count for some reason; however it's
@@ -271,11 +268,11 @@ class CrawlArnetMiner(Task):
 
             if cit_offset >= cit_count or not citations:
                 delay = 30 * 60
-                stage = Stage.FetchCitations(pub_offset=stage.pub_offset + 1)
+                stage = Stage.FetchCitations(missing_pub_ids=stage.missing_pub_ids[1:])
             else:
                 delay = 5 * 60
                 stage = Stage.FetchCitations(
-                    pub_offset=stage.pub_offset, cit_offset=cit_offset
+                    missing_pub_ids=stage.missing_pub_ids, cit_offset=cit_offset
                 )
 
             return Step(delay=delay, stage=stage, citations={pub_id: citations},)
