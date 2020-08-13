@@ -296,7 +296,6 @@ class Database:
                     cursor=cursor,
                 )
 
-    @_transaction
     async def save_crawler_step(self, source, step, *, cursor=None):
         await self._insert(
             *(
@@ -370,14 +369,81 @@ class Database:
             cursor=cursor,
         )
 
+    async def get_publications(self, username):
+        # TODO merge publications and cites and other stats like author count
+        # TODO this should be smarter and if any has missing data (e.g. year) use a different source
+        publications = {}
+        async with self._db.execute(
+            """
+            SELECT
+                p.source,
+                p.path,
+                p.name,
+                p.year,
+                p.ref,
+                a.full_name,
+                c.cited_by
+            FROM Publication AS p
+            JOIN PublicationAuthors AS pa ON (
+                p.owner = pa.owner
+                AND p.source = pa.source
+                AND p.path = pa.pub_path
+            )
+            JOIN Author AS a ON (
+                p.owner = a.owner
+                AND p.source = a.source
+                AND pa.author_path = a.path
+            )
+            LEFT JOIN Cites AS c ON (
+                p.owner = c.owner
+                AND p.source = c.source
+                AND p.path = c.pub_path
+            )
+            WHERE
+                p.owner = ?
+                AND p.by_self = 1
+        """,
+            (username,),
+        ) as cursor:
+            async for (
+                source,
+                pub_path,
+                pub_name,
+                year,
+                ref,
+                author_name,
+                cit_path,
+            ) in cursor:
+                if pub_path in publications:
+                    publications[pub_path]["sources"][source] = ref
+                    publications[pub_path]["author_names"].add(author_name)
+                    publications[pub_path]["cites"].add(cit_path)
+                else:
+                    publications[pub_path] = {
+                        "sources": {source: ref},
+                        "name": pub_name,
+                        "author_names": {author_name},
+                        "cites": {cit_path},
+                        "year": year,
+                    }
+
+        return [
+            {
+                "sources": [{"key": k, "ref": v} for k, v in p["sources"].items()],
+                "name": p["name"],
+                "authors": [{"full_name": a} for a in p["author_names"]],
+                "cites": sum(1 for c in p["cites"] if c),
+                "year": p["year"],
+            }
+            for p in publications.values()
+        ]
+
 
 if __name__ == "__main__":
 
     async def main():
-        async with Database("test.db") as db:
-            # await db.register_user(username='a', password='b', salt='c', token='d')
-            print(await db.get_username(token="e"))
-            pass
+        async with Database("../uex.db") as db:
+            await db.get_publications("admin")
 
     import asyncio
 

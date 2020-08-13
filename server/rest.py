@@ -106,44 +106,7 @@ async def get_metrics(request, username):
 
 @_require_user
 async def get_publications(request, username):
-    raise web.HTTPForbidden()  # TODO
-    publications = []
-
-    used = set()
-    merge_checker = request.app["merger"].checker()
-    storages = request.app["crawler"].storages()
-    for source, storage in storages.items():
-        for pub_id in storage.user_pub_ids:
-            pub = storage.load_pub(pub_id)
-            path = pub.unique_path_name()
-
-            sources = [{"key": source, "ref": pub.ref,}]
-            used.add(path)
-            for ns, p in merge_checker.get_related(source, path):
-                # TODO having to load each related publication is quite expensive
-                # probably the entire storage should be in memory AND disk because
-                # it's not that much data (even less if "extra" is not in memory since
-                # we don't use it).
-                sources.append({"key": ns, "ref": storages[ns].load_pub(path=p).ref})
-                used.add(p)
-
-            # TODO also merge cites and other stats like author count
-            cites = len(pub.cit_paths or ())
-            # TODO this should be smarter and if anyhas missing data (e.g. year) use a different source
-            publications.append(
-                {
-                    "sources": sources,
-                    "name": pub.name,
-                    "authors": [
-                        {"full_name": storage.load_author(a).full_name}
-                        for a in pub.authors
-                    ],
-                    "cites": cites,
-                    "year": pub.year,
-                }
-            )
-
-    return web.json_response(publications)
+    return web.json_response(await request.app["db"].get_publications(username))
 
 
 @_require_user
