@@ -3,6 +3,7 @@ import uuid
 import json
 import statistics
 import functools
+import time
 from pathlib import Path
 
 from aiohttp import web
@@ -210,6 +211,17 @@ async def update_password(request, username, payload):
     return web.json_response(result)
 
 
+@_require_user
+async def takeout_data(request, username):
+    body = await request.app["db"].export_data_as_zip(username)
+    filename = f"uex-citehub-takeout-{int(time.time())}.zip"
+    return web.Response(
+        body=body,
+        content_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 ROUTES = [
     web.get("/rest/metrics", get_metrics),
     web.get("/rest/publications", get_publications),
@@ -221,4 +233,5 @@ ROUTES = [
     web.post("/rest/user/logout", logout_user),
     web.post("/rest/user/delete", delete_user),
     web.post("/rest/user/update-password", update_password),
+    web.get("/rest/takeout", takeout_data),
 ]

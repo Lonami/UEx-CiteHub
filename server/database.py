@@ -3,6 +3,9 @@ from collections import namedtuple
 from dataclasses import asdict
 import itertools
 import sqlite3
+import csv
+import zipfile
+import io
 import functools
 import json
 from .storage import Publication as StepPublication
@@ -133,7 +136,6 @@ class Database:
             PRIMARY KEY(username)
         ) WITHOUT ROWID"""
         )
-        # self-author and self-pub
         await cursor.execute(
             """CREATE TABLE Source (
             owner TEXT,
@@ -508,6 +510,60 @@ class Database:
             }
             for p in publications.values()
         ]
+
+    async def _export_table_as_csv(self, table, owner, fields):
+        fields = fields.split()
+        buffer = io.StringIO(newline="")
+        writer = csv.writer(buffer)
+        writer.writerow(fields)
+        async with self._select(table, "WHERE owner = ?", owner) as select:
+            async for row in select:
+                writer.writerow(getattr(row, field) for field in fields)
+        buffer.flush()
+        return buffer.getvalue()
+
+    async def export_data_as_zip(self, username):
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w") as zf:
+            zf.writestr(
+                "sources.csv",
+                await self._export_table_as_csv(Source, username, "key values_json"),
+            )
+            zf.writestr(
+                "authors.csv",
+                await self._export_table_as_csv(
+                    Author,
+                    username,
+                    "source path full_name id first_name last_name extra_json",
+                ),
+            )
+            zf.writestr(
+                "publications.csv",
+                await self._export_table_as_csv(
+                    Publication,
+                    username,
+                    "source path by_self name id year ref extra_json",
+                ),
+            )
+            zf.writestr(
+                "publication-authors.csv",
+                await self._export_table_as_csv(
+                    PublicationAuthors, username, "source pub_path author_path"
+                ),
+            )
+            zf.writestr(
+                "cites.csv",
+                await self._export_table_as_csv(
+                    Cites, username, "source pub_path cited_by"
+                ),
+            )
+            zf.writestr(
+                "merges.csv",
+                await self._export_table_as_csv(
+                    Merge, username, "source_a source_b pub_a pub_b similarity"
+                ),
+            )
+        return buffer.getvalue()
 
 
 if __name__ == "__main__":

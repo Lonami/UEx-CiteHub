@@ -122,6 +122,18 @@ async function delete_account() {
     </div>
 </form>
 
+<h2>Export data</h2>
+
+<p>
+    You may export all of your data as a compressed ZIP file consisting of several
+    comma-separated values files (CSV) at any time. Please be considerate and don't
+    abuse this feature, as it requires a fair amount of work on the server.
+</p>
+
+<form method="GET" action="/rest/takeout">
+    <input type="submit" value="Export my data">
+</form>
+
 <h2>Delete account</h2>
 
 <p>
