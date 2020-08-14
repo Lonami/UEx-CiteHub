@@ -26,6 +26,9 @@ class Step:
     # Mapping ``{Publication ID: Publications citing the former}``
     citations: Mapping[str, List[Publication]] = field(default_factory=dict)
 
+    # Amount of consecutive errors trying to process the step at this stage
+    error: Optional[int] = None
+
     # For convenience the authors are stored as `Author` in `Publication`, but before asving
     # them they should be converted to paths.
     #
@@ -61,6 +64,9 @@ class Step:
 
         data = asdict(self.stage)
         data["_index"] = self.stage.INDEX
+        if self.error is not None:
+            data["_error"] = self.error
+
         return json.dumps(data)
 
     def due(self):

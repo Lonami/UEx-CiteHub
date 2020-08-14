@@ -11,12 +11,6 @@ _log = logging.getLogger(__name__)
 ERROR_DELAYS = [1, 10, 60, 10 * 60, 60 * 60, 24 * 60 * 60]
 
 
-class StepException(Exception):
-    def __init__(self, due):
-        super().__init__()
-        self.due = due
-
-
 class Crawler(abc.ABC):
     """
     Tasks are completely stateless, and a class is only used to ensure some
@@ -70,15 +64,14 @@ class Crawler(abc.ABC):
 
         if state is None:
             stage = cls.initial_stage()
+            error = 0
         else:
             stage_index = state.pop("_index")
+            error = state.pop("_error", 0)
             for field in dir(cls.Stage):
                 Field = getattr(cls.Stage, field)
                 if is_dataclass(Field) and Field.INDEX == stage_index:
                     stage = Field(**state)
-
-        # TODO how to handle error in completely-stateless?
-        error = 0
 
         try:
             step = await cls._step(values, stage, session)
@@ -91,10 +84,10 @@ class Crawler(abc.ABC):
                 cls.namespace(),
                 delay,
             )
-
-            raise StepException(delay)
-        else:
-            error = 0
+            # Can only store data (error) when in a state so reuse the stage to retry.
+            # This assumes stage hasn't mutated which is up to the various crawlers to
+            # ensure in their implementations.
+            return Step(delay=delay, stage=stage, error=error,)
 
         if not isinstance(step, Step):
             raise TypeError(f"step returned invalid data: {step}")
