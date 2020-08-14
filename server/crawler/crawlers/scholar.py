@@ -365,10 +365,6 @@ class CrawlScholar(Crawler):
         return "scholar"
 
     @classmethod
-    def initial_stage(cls):
-        return Stage.FetchFirst()
-
-    @classmethod
     def fields(cls):
         return {
             "url": 'Navigate to <a href="https://scholar.google.com/citations'

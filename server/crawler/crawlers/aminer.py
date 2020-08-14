@@ -206,10 +206,6 @@ class CrawlArnetMiner(Crawler):
         return "aminer"
 
     @classmethod
-    def initial_stage(cls):
-        return Stage.FetchPublications()
-
-    @classmethod
     def fields(cls):
         return {
             "url": 'Navigate to <a href="https://www.aminer.cn/">AMiner\'s home</a> and search for '

@@ -192,10 +192,6 @@ class CrawlExplore(Crawler):
         return "ieeexplore"
 
     @classmethod
-    def initial_stage(cls):
-        return Stage.FetchPublications()
-
-    @classmethod
     def fields(cls):
         return {
             "url": 'Navigate to <a href="https://ieeexplore.ieee.org/">IEEE Xplore\'s home</a> and'

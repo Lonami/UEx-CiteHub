@@ -143,10 +143,6 @@ class CrawlResearchGate(Crawler):
         return "researchgate"
 
     @classmethod
-    def initial_stage(cls):
-        return Stage.FetchPublications()
-
-    @classmethod
     def fields(cls):
         return {
             "url": 'Navigate to <a href="https://www.researchgate.net/search">ResearchGate\'s '

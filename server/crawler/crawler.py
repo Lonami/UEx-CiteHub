@@ -54,24 +54,33 @@ class Crawler(abc.ABC):
         raise NotImplementedError
 
     @classmethod
-    async def step(cls, *, values, state, session):
+    def _find_stage(cls, index):
         if not isinstance(cls.Stage, type):
             raise RuntimeError("task subclass should define a nested Stage class")
 
+        for field in dir(cls.Stage):
+            Field = getattr(cls.Stage, field)
+            if is_dataclass(Field) and Field.INDEX == index:
+                return Field
+
+        raise RuntimeError(
+            f"impossible stage index {index} given for {cls.namespace()}"
+        )
+
+    @classmethod
+    async def step(cls, *, values, state, session):
         # Don't bother stepping unless all the values exist in the required fields
         if not all(values.get(k) for k in cls.fields()):
             return Step(delay=24 * 60 * 60, stage=None)
 
         if state is None:
-            stage = cls.initial_stage()
+            # Initial stage has index 0, and should have every value with a default
+            stage = cls._find_stage(0)()
             error = 0
         else:
             stage_index = state.pop("_index")
             error = state.pop("_error", 0)
-            for field in dir(cls.Stage):
-                Field = getattr(cls.Stage, field)
-                if is_dataclass(Field) and Field.INDEX == stage_index:
-                    stage = Field(**state)
+            stage = cls._find_stage(stage_index)(**state)
 
         try:
             step = await cls._step(values, stage, session)

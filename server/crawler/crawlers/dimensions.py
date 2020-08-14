@@ -143,10 +143,6 @@ class CrawlDimensions(Crawler):
         return "dimensions"
 
     @classmethod
-    def initial_stage(cls):
-        return Stage.FetchAuthors()
-
-    @classmethod
     def fields(cls):
         return {
             "url": 'Navigate to <a href="https://app.dimensions.ai/discover/publication">'
