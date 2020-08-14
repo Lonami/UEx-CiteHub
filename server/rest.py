@@ -194,7 +194,6 @@ async def logout_user(request, username):
 @_require_user
 async def delete_user(request, username):
     result = await request.app["users"].delete(username)
-    # TODO remove only the data related to us
     resp = web.json_response(result)
     resp.del_cookie(AUTH_TOKEN_COOKIE)
     return resp
