@@ -184,7 +184,7 @@ class CrawlResearchGate(Crawler):
 
         elif isinstance(stage, Stage.FetchCitations):
             if not stage.missing_pub_ids:
-                return Step(delay=24 * 60 * 60, stage=cls.initial_stage())
+                return Step()
 
             pub_id = stage.missing_pub_ids[0]
 

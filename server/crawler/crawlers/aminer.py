@@ -253,7 +253,7 @@ class CrawlArnetMiner(Crawler):
         elif isinstance(stage, Stage.FetchCitations):
             if not stage.missing_pub_ids:
                 _log.debug("checked all publications")
-                return Step(delay=24 * 60 * 60, stage=cls.initial_stage())
+                return Step()
 
             pub_id = stage.missing_pub_ids[0]
             data = await miner.search_cited_by(pub_id, stage.cit_offset)

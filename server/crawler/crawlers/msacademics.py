@@ -358,7 +358,7 @@ class CrawlAcademics(Crawler):
                     citations.setdefault(cites_id, []).append(cit)
 
             if offset >= cit_count or not citations:
-                return Step(delay=30 * 60, stage=cls.initial_stage())
+                return Step()
             else:
                 return Step(
                     delay=2 * 60,

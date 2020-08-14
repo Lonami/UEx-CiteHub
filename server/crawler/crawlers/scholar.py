@@ -331,7 +331,6 @@ def author_id_from_url(url):
 PROFILE_DELAY = 5 * 60
 PUBLICATION_DELAY = 60 * 60
 CITATION_DELAY = 5 * 60
-FULL_DELAY = 24 * 60 * 60
 
 
 class Stage:
@@ -430,7 +429,7 @@ class CrawlScholar(Crawler):
 
         elif isinstance(stage, Stage.FetchSinglePublication):
             if stage.offset >= len(stage.known_pub_ids):
-                return Step(delay=FULL_DELAY, stage=cls.initial_stage())
+                return Step()
 
             pub_id = stage.known_pub_ids[stage.offset]
             soup = await _get_page(session, _URL_PUBLICATION.format(pub_id),)

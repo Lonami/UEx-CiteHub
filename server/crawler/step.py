@@ -7,15 +7,17 @@ from ..storage import Author, Publication
 
 
 _DELAY_JITTER_PERCENT = 0.05
+_FULL_CYCLE_DELAY = 7 * 24 * 60 * 60
 
 
 @dataclass
 class Step:
-    # Delay, in seconds, before the next step should be taken
-    delay: int
+    # Delay, in seconds, before the next step should be taken,
+    # by default the delay of a full cycle.
+    delay: int = _FULL_CYCLE_DELAY
 
-    # Next stage
-    stage: Any
+    # Next stage, by default empty (representing the initial one)
+    stage: Any = None
 
     # Any `Author` found along the way
     authors: List[Author] = field(default_factory=list)
