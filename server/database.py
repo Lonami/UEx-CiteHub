@@ -45,12 +45,14 @@ def _transaction(func):
 
 
 def _adapt_step_publications(step):
-    for pub in step.self_publications:
-        yield pub, 1
-
+    # Go over citations first so that if any of the self publications was also
+    # present as a a citation, it will be replaced but marked as `by_self`.
     for citations in step.citations.values():
         for cit in citations:
             yield cit, 0
+
+    for pub in step.self_publications:
+        yield pub, 1
 
 
 class Select:
@@ -244,6 +246,15 @@ class Database:
             )
 
     @_transaction
+    async def _insert_or_replace(self, *tuples, cursor=None):
+        for tup in tuples:
+            fields = ",".join("?" * len(tup))
+            await self._db.execute(
+                f"INSERT OR REPLACE INTO {tup.__class__.__name__} VALUES ({fields})",
+                tup,
+            )
+
+    @_transaction
     async def _execute(self, query, *args, cursor=None):
         await cursor.execute(query, args)
         return cursor.rowcount
@@ -324,7 +335,10 @@ class Database:
 
     @_transaction
     async def save_crawler_step(self, source, step, *, cursor=None):
-        await self._insert(
+        # Use `_insert_or_replace` under the premise that sources may omit
+        # information entirely, but not provide less information about what
+        # is known (so replacing old data won't produce any loss).
+        await self._insert_or_replace(
             *(
                 Author(
                     owner=source.owner,
@@ -340,9 +354,7 @@ class Database:
             ),
             cursor=cursor,
         )
-        # TODO what happens if one of the citations is our own?
-        # probably sqlite3.IntegrityError: UNIQUE constraint failed
-        await self._insert(
+        await self._insert_or_replace(
             *(
                 Publication(
                     owner=source.owner,
@@ -360,7 +372,7 @@ class Database:
             cursor=cursor,
         )
         for pub, _ in _adapt_step_publications(step):
-            await self._insert(
+            await self._insert_or_replace(
                 *(
                     PublicationAuthors(
                         owner=source.owner,
@@ -375,7 +387,7 @@ class Database:
         for cites_pub_id, citations in step.citations.items():
             # TODO bad (maybe the step should have a method to get all the tuples to insert?)
             pub_path = StepPublication(name="", id=cites_pub_id).unique_path_name()
-            await self._insert(
+            await self._insert_or_replace(
                 *(
                     Cites(
                         owner=source.owner,
