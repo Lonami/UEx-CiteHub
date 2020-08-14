@@ -39,7 +39,7 @@ def adapt_authors(data) -> Generator[Author, None, None]:
 
         yield Author(
             id=author["id"],
-            *_get_name_arguments(author["first_name"], author["last_name"]),
+            **_get_name_arguments(author["first_name"], author["last_name"]),
             extra={
                 "organization": author["current_org_name"],
                 "country": author["current_org_country"],
@@ -68,7 +68,7 @@ def adapt_publications(data) -> Generator[Publication, None, None]:
             authors=[
                 Author(
                     id=a["researcher_id"] or None,
-                    *_get_name_arguments(a["first_name"], a["last_name"]),
+                    **_get_name_arguments(a["first_name"], a["last_name"]),
                 )
                 for a in affiliations
             ],
