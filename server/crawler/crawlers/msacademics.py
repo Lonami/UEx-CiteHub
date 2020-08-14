@@ -284,10 +284,6 @@ class CrawlAcademics(Crawler):
         return "academics"
 
     @classmethod
-    def initial_stage(cls):
-        return Stage.FetchQueries()
-
-    @classmethod
     def fields(cls):
         return {
             "url": 'Navigate to <a href="https://academic.microsoft.com/home">Microsoft Academic\'s '

@@ -29,12 +29,6 @@ class Crawler(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def initial_stage(cls):
-        # TODO this can probably be stage with index 0 that should have default values set
-        raise NotImplementedError
-
-    @classmethod
-    @abc.abstractmethod
     def fields(cls) -> Mapping[str, str]:
         # Should return `{field key: field description}`` on required user-provided fields.
         # The description may contain HTML tags.
