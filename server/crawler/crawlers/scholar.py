@@ -341,18 +341,18 @@ class Stage:
     @dataclass
     class FetchPublications:
         INDEX = 1
-        known_pub_ids = List[str]
+        known_pub_ids: List[str]
 
     @dataclass
     class FetchSinglePublication:
         INDEX = 2
-        known_pub_ids = List[str]
+        known_pub_ids: List[str]
         offset: int = 0
 
     @dataclass
     class FetchCitations:
         INDEX = 3
-        known_pub_ids = List[str]
+        known_pub_ids: List[str]
         offset: int
         cit_url: str
 
