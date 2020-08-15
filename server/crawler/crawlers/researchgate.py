@@ -19,13 +19,17 @@ from ...storage import Author, Publication
 from ..crawler import Crawler
 from dataclasses import dataclass
 from ..step import Step
+from aiohttp import ClientSession
 
 
 _log = logging.getLogger(__name__)
 
 
 async def fetch_token_sid(session):
-    async with session.get(f"https://www.researchgate.net/refreshToken") as resp:
+    # Make sure to not use cookies so it returns set-cookie
+    async with session.get(
+        f"https://www.researchgate.net/refreshToken", cookies={}
+    ) as resp:
         for header in resp.headers.getall("set-cookie"):
             if header.startswith("sid="):
                 sid = header[4 : header.index(";")]
