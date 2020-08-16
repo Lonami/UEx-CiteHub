@@ -44,17 +44,17 @@ class Merger:
     async def _periodic_merge(self):
         try:
             while True:
-                try:
-                    self._force_check.clear()
-                    await asyncio.wait_for(self._force_check.wait(), AUTO_DELAY)
-                except asyncio.TimeoutError:
-                    pass
-
                 _log.info("merging data")
                 # Set the flag so that if someone else tries it will fail
                 self._force_check.set()
                 await self._merge()
                 _log.info("merged data")
+
+                try:
+                    self._force_check.clear()
+                    await asyncio.wait_for(self._force_check.wait(), AUTO_DELAY)
+                except asyncio.TimeoutError:
+                    pass
         except asyncio.CancelledError:
             raise
         except Exception:
