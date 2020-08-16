@@ -78,8 +78,8 @@ class Merger:
                         Merge(
                             source_a=source_a,
                             source_b=source_b,
-                            pub_a=pub_a.unique_path_name(),
-                            pub_b=pub_b.unique_path_name(),
+                            pub_a=pub_a.path,
+                            pub_b=pub_b.path,
                             similarity=sim,
                         )
                     )

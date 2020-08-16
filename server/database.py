@@ -24,7 +24,7 @@ PublicationAuthors = namedtuple(
     "PublicationAuthors", "owner source pub_path author_path"
 )
 Cites = namedtuple("Cites", "owner source pub_path cited_by")
-Merge = namedtuple("Merge", "owner source_a source_b pub_a pub_b")
+Merge = namedtuple("Merge", "owner source_a source_b pub_a pub_b similarity")
 
 
 def _transaction(func):
