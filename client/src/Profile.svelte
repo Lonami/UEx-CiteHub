@@ -78,10 +78,21 @@ async function delete_account() {
     div.main {
         padding: 1em;
     }
+
+    div.error {
+        top: 0;
+        width: 100%;
+        position: fixed;
+        background-color: #ff0;
+        padding: 1em;
+    }
 </style>
 
 {#if last_error !== null}
-    <p>An error occured: {last_error.message}</p>
+    <div class="error">
+        <p>An error occured: {last_error.message}</p>
+        <button on:click={e => last_error = null}>Close message</button>
+    </div>
 {/if}
 
 <div class="main">
