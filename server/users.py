@@ -80,10 +80,10 @@ class Users:
         return await self._db.get_username(token=token)
 
     async def change_password(self, username, old_password, new_password):
-        details = await self._db.get_user_password(username=username)
+        saved_password, salt = await self._db.get_user_password(username=username)
 
-        password, _ = utils.hash_user_pass(*details)
-        if password != details[0]:
+        old_password, _ = utils.hash_user_pass(old_password, salt)
+        if old_password != saved_password:
             raise web.HTTPBadRequest(reason="old password did not match")
 
         _check_password(new_password)
