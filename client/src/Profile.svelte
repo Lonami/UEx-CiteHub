@@ -1,5 +1,6 @@
 <script>
 import { onMount } from 'svelte';
+import { slide } from 'svelte/transition';
 import { get_user_profile, update_user_profile, update_password, delete_user } from './rest.js';
 import { logged_in } from './stores.js';
 
@@ -10,6 +11,8 @@ let password_form;
 let submit_password;
 
 let last_error = null;
+let notification = null;
+let notification_id = null;
 
 let delete_confirm;
 
@@ -26,7 +29,6 @@ async function save_details() {
             }
             sources[source][key] = value;
         }
-        console.log(sources);
         let result = await update_user_profile(sources);
         if (result.errors.length !== 0) {
             let error = 'Some errors occured:';
@@ -34,6 +36,8 @@ async function save_details() {
                 error += `\nFailed to update ${e.source}.${e.key}: ${e.reason}`;
             }
             last_error = {message: error};
+        } else {
+            notify("sources updated successfully");
         }
     } catch (e) {
         last_error = e;
@@ -54,7 +58,7 @@ async function save_password() {
             event.target.old_password.value,
             event.target.new_password.value
         );
-        last_error = null;
+        notify("password updated successfully");
     } catch (e) {
         last_error = e;
     } finally {
@@ -72,6 +76,20 @@ async function delete_account() {
         last_error = e;
     }
 }
+
+function notify(message) {
+    if (notification_id !== null) {
+        clearTimeout(notification_id);
+    }
+    last_error = null;
+    notification = message;
+    notification_id = setTimeout(clear_notify, 7000);
+}
+
+function clear_notify() {
+    notification = null;
+    notification_id = null;
+}
 </script>
 
 <style>
@@ -79,19 +97,33 @@ async function delete_account() {
         padding: 1em;
     }
 
-    div.error {
+    div.error, div.notification {
         top: 0;
         width: 100%;
         position: fixed;
-        background-color: #ff0;
         padding: 1em;
+    }
+
+    div.error {
+        background-color: #ff0;
+    }
+
+    div.notification {
+        background-color: #afa;
     }
 </style>
 
 {#if last_error !== null}
-    <div class="error">
+    <div class="error" transition:slide>
         <p>An error occured: {last_error.message}</p>
         <button on:click={e => last_error = null}>Close message</button>
+    </div>
+{/if}
+
+{#if notification !== null}
+    <div class="notification" transition:slide>
+        <p>Notification: {notification}</p>
+        <button on:click={clear_notify}>Close message</button>
     </div>
 {/if}
 
