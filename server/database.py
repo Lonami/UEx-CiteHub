@@ -9,6 +9,7 @@ import io
 import functools
 import json
 from .storage import Publication as StepPublication
+from .merger import MergeCheck
 
 DB_VERSION = 1
 Version = namedtuple("Version", "version")
@@ -443,7 +444,6 @@ class Database:
         )
 
     async def get_publications(self, username):
-        # TODO merge publications and cites and other stats like author count
         # TODO this should be smarter and if any has missing data (e.g. year) use a different source
         publications = {}
         async with self._db.execute(
@@ -451,6 +451,7 @@ class Database:
             SELECT
                 p.source,
                 p.path,
+                p.by_self,
                 p.name,
                 p.year,
                 p.ref,
@@ -474,42 +475,88 @@ class Database:
             )
             WHERE
                 p.owner = ?
-                AND p.by_self = 1
         """,
             (username,),
         ) as cursor:
             async for (
                 source,
                 pub_path,
+                by_self,
                 pub_name,
                 year,
                 ref,
                 author_name,
                 cit_path,
             ) in cursor:
-                if pub_path in publications:
-                    publications[pub_path]["sources"][source] = ref
-                    publications[pub_path]["author_names"].add(author_name)
-                    publications[pub_path]["cites"].add(cit_path)
+                pubs = publications.setdefault(source, {})
+                if pub_path in pubs:
+                    pubs[pub_path]["author_names"].add(author_name)
+                    pubs[pub_path]["cites"].add(cit_path)
                 else:
-                    publications[pub_path] = {
-                        "sources": {source: ref},
+                    pubs[pub_path] = {
+                        "ref": ref,
                         "name": pub_name,
                         "author_names": {author_name},
                         "cites": {cit_path},
                         "year": year,
+                        "by_self": by_self != 0,
                     }
 
-        return [
-            {
-                "sources": [{"key": k, "ref": v} for k, v in p["sources"].items()],
-                "name": p["name"],
-                "authors": [{"full_name": a} for a in p["author_names"]],
-                "cites": sum(1 for c in p["cites"] if c),
-                "year": p["year"],
-            }
-            for p in publications.values()
-        ]
+        # Separate queries make this process a bit less tedious
+        merges = MergeCheck(await self._select_all(Merge, "WHERE owner = ?", username))
+
+        used = set()
+        result = []
+        for source, pubs in publications.items():
+            for path, pub in pubs.items():
+                if not pub["by_self"] or (source, path) in used:
+                    continue
+
+                # Base publication value
+                used.add((source, path))
+                value = {
+                    "sources": [{"key": source, "ref": pub["ref"]}],
+                    "name": pub["name"],
+                    "authors": [{"full_name": a} for a in pub["author_names"]],
+                    "cites": 0,
+                    "year": pub["year"],
+                }
+
+                # Count all the cites from the main publication at once, and mark all of them
+                # plus the related ones as used.
+                cites = len(pub["cites"])
+                used_cites = {(source, c) for c in pub["cites"]}
+                for cit_path in pub["cites"]:
+                    for rel_cite_source, rel_cite_path in merges.get_related(
+                        source, cit_path
+                    ):
+                        used_cites.add((rel_cite_source, rel_cite_path))
+
+                # Merge publication value
+                for rel_source, rel_path in merges.get_related(source, path):
+                    rel_pub = publications[rel_source][rel_path]
+                    if not rel_pub["by_self"] or (rel_source, rel_path) in used:
+                        continue  # might come from a citation
+
+                    used.add((rel_source, rel_path))
+                    value["sources"].append({"key": rel_source, "ref": rel_pub["ref"]})
+
+                    # Update cite count only once per cite (related ones won't count)
+                    for cit_path in rel_pub["cites"]:
+                        if (rel_source, cit_path) in used_cites:
+                            continue
+
+                        cites += 1
+                        used_cites.add((rel_source, cit_path))
+                        for rel_cite_source, rel_cite_path in merges.get_related(
+                            rel_source, cit_path
+                        ):
+                            used_cites.add((rel_cite_source, rel_cite_path))
+
+                value["cites"] = cites
+                result.append(value)
+
+        return result
 
     async def _export_table_as_csv(self, table, owner, fields):
         fields = fields.split()

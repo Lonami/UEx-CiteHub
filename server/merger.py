@@ -25,6 +25,22 @@ def similarity(a, b, _words_re=re.compile(r"\w+")):
         return 0.0
 
 
+class MergeCheck:
+    def __init__(self, merges):
+        # {source: {path: [(related source, related path)]}}
+        self._relations = defaultdict(lambda: defaultdict(list))
+        for merge in merges:
+            self._relations[merge.source_a][merge.pub_a].append(
+                (merge.source_b, merge.pub_b)
+            )
+            self._relations[merge.source_b][merge.pub_b].append(
+                (merge.source_a, merge.pub_a)
+            )
+
+    def get_related(self, source, path):
+        return self._relations[source][path]
+
+
 @dataclass
 class Merge:
     source_a: str
