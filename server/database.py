@@ -444,7 +444,6 @@ class Database:
         )
 
     async def get_publications(self, username):
-        # TODO this should be smarter and if any has missing data (e.g. year) use a different source
         publications = {}
         async with self._db.execute(
             """
@@ -540,6 +539,12 @@ class Database:
 
                     used.add((rel_source, rel_path))
                     value["sources"].append({"key": rel_source, "ref": rel_pub["ref"]})
+
+                    # Sometimes the year differs (or may be missing). Because there is no single
+                    # source of truth, show the year on a best-effort by not showing missing.
+                    # Similar can happen with authors (they should be merged).
+                    if value["year"] is None:
+                        value["year"] = rel_pub["year"]
 
                     # Update cite count only once per cite (related ones won't count)
                     for cit_path in rel_pub["cites"]:
