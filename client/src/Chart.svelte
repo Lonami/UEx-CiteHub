@@ -55,8 +55,7 @@
 <style>
     .chart-container {
         position: relative;
-        height: 40vh;
-        width: 80vw;
+        width: 60vw;
     }
 </style>
 

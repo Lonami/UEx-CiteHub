@@ -16,36 +16,39 @@
 
 <style>
 nav {
-    border-bottom: 1px solid #000;
+    background-color: #005682 /* homestuck colors */;
+    border-bottom: 5px solid #000;
 }
 
-ol {
+ul {
+    margin: 0;
     list-style-type: none;
     padding-left: 0;
+    display: flex;
 }
 
 li {
     display: inline-block;
 }
 
-a::after {
+a {
+    color: #fff;
+    text-decoration: none;
+    font-size: large;
+    padding: 1em;
+    transition: background-color 250ms;
     display: inline-block;
-    color: #000;
-    content: '»';
-    font-size: 80%;
-    font-weight: bold;
-    padding: 0 3px;
 }
 
-.selected {
-    font-weight: bold;
+a:hover, a.selected {
+    background-color: #008282;
 }
 </style>
 
 <nav>
-    <ol>
+    <ul>
         <!-- Routes also in: App.svelte, server.py -->
-        <li><a href='/' class:selected={window.location.pathname == '/'}>UEx CiteHub</a></li>
+        <li><a href='/' class:selected={window.location.pathname == '/a'}><strong>UEx CiteHub</strong></a></li>
         {#if is_logged}
             <li><a href='/metrics' class:selected={window.location.pathname == '/metrics'}>Metrics</a></li>
             <li><a href='/publications' class:selected={window.location.pathname == '/publications'}>Publications</a></li>
@@ -55,5 +58,5 @@ a::after {
             <li><a href='/register' class:selected={window.location.pathname == '/register'}>Register</a></li>
             <li><a href='/login' class:selected={window.location.pathname == '/login'}>Login</a></li>
         {/if}
-    </ol>
+    </ul>
 </nav>

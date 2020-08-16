@@ -2,7 +2,7 @@
     import Publication from './Publication.svelte';
     import Chart from './Chart.svelte';
 
-    import { get_publications, force_merge } from './rest.js';
+    import { get_publications } from './rest.js';
 
     let sort_by = {key: null, rev: false};
     function set_sort(key) {
@@ -36,39 +36,36 @@
 <style>
     table {
         border-collapse: collapse;
-        max-width: 1200px;
+        width: 100%;
     }
 
     th {
         font-variant: small-caps;
         background-color: #eee;
-        padding: 2px 4px;
+        padding: 0.5em 1em;
         cursor: pointer;
+        font-size: large;
     }
 </style>
 
-<button on:click={force_merge}>Force merge</button>
-
-<div class="publications">
-    {#await get_publications()}
-        <p>Loading publications…</p>
-    {:then publications}
-        <table>
-            <thead>
-                <tr>
-                    <th on:click={_ => set_sort(null)}>Source</th>
-                    <th on:click={_ => set_sort("name")}>Title</th>
-                    <th on:click={_ => set_sort("cites")}>Cited by</th>
-                    <th on:click={_ => set_sort("year")}>Year</th>
-                </tr>
-            </thead>
-            <tbody>
-                {#each sort_list(publications) as publication}
-                    <Publication {publication}/>
-                {/each}
-            </tbody>
-        </table>
-    {:catch error}
-        <p>Failed to fetch publications: {error.message}</p>
-    {/await}
-</div>
+{#await get_publications()}
+    <p>Loading publications…</p>
+{:then publications}
+    <table>
+        <thead>
+            <tr>
+                <th on:click={_ => set_sort(null)} title="Where this publication has been found in">Source</th>
+                <th on:click={_ => set_sort("name")} title="Title of the publication">Title</th>
+                <th on:click={_ => set_sort("cites")} title="Amount of unique cites the publication has">Cited by</th>
+                <th on:click={_ => set_sort("year")} title="Year when the publication was published">Year</th>
+            </tr>
+        </thead>
+        <tbody>
+            {#each sort_list(publications) as publication}
+                <Publication {publication}/>
+            {/each}
+        </tbody>
+    </table>
+{:catch error}
+    <p>Failed to fetch publications: {error.message}</p>
+{/await}

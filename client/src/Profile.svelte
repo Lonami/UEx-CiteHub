@@ -75,79 +75,85 @@ async function delete_account() {
 </script>
 
 <style>
+    div.main {
+        padding: 1em;
+    }
 </style>
 
 {#if last_error !== null}
     <p>An error occured: {last_error.message}</p>
 {/if}
 
-<h2>Sources</h2>
-{#await get_user_profile()}
-    <p>Loading external source fields…</p>
-{:then profile}
-    <p>Logged in as <em>{profile.username}</em>.</p>
-    <form bind:this={source_form} on:submit|preventDefault={save_details}>
-        {#each Object.entries(profile.sources) as [source, fields]}
-            <fieldset>
-                <legend>{source}</legend>
-                {#each Object.entries(fields) as [key, value]}
-                    <div>
-                        <label for="{source}.{key}">Value for {key}:</label>
-                        <input id="{source}.{key}" name="{source}.{key}" value={value.value}>
-                        <p>{@html value.description}</p>
-                    </div>
-                {/each}
-            </fieldset>
-        {/each}
+<div class="main">
+    {#await get_user_profile()}
+        <p>Loading external source fields…</p>
+    {:then profile}
+        <p>Logged in as <em>{profile.username}</em>.</p>
+
+        <h2>Sources</h2>
+        <form bind:this={source_form} on:submit|preventDefault={save_details}>
+            {#each Object.entries(profile.sources) as [source, fields]}
+                <fieldset>
+                    <legend>{source}</legend>
+                    {#each Object.entries(fields) as [key, value]}
+                        <div>
+                            <label for="{source}.{key}">Value for {key}:</label>
+                            <input id="{source}.{key}" name="{source}.{key}" value={value.value}>
+                            <p>{@html value.description}</p>
+                        </div>
+                    {/each}
+                </fieldset>
+            {/each}
+            <div>
+                <input bind:this={submit_source} type="submit" value="Update sources">
+            </div>
+        </form>
+    {:catch e}
+        <p>Failed to load external source fields: {e.message}</p>
+    {/await}
+
+    <h2>Update password</h2>
+    <form bind:this={password_form} on:submit|preventDefault={save_password}>
         <div>
-            <input bind:this={submit_source} type="submit" value="Save">
+            <label for="old_password">Old password: </label>
+            <input type="password" name="old_password" id="old_password" required>
+        </div>
+        <div>
+            <label for="new_password">New password: </label>
+            <input type="password" name="new_password" id="new_password" required>
+        </div>
+        <div>
+            <input bind:this={submit_password} type="submit" value="Update password">
         </div>
     </form>
-{:catch e}
-    <p>Failed to load external source fields: {e.message}</p>
-{/await}
 
-<h2>Update password</h2>
-<form bind:this={password_form} on:submit|preventDefault={save_password}>
-    <div>
-        <label for="old_password">Old password: </label>
-        <input type="password" name="old_password" id="old_password" required>
-    </div>
-    <div>
-        <label for="new_password">New password: </label>
-        <input type="password" name="new_password" id="new_password" required>
-    </div>
-    <div>
-        <input bind:this={submit_password} type="submit" value="Update password">
-    </div>
-</form>
+    <h2>Export data</h2>
 
-<h2>Export data</h2>
+    <p>
+        You may export all of your data as a compressed ZIP file consisting of several
+        comma-separated values files (CSV) at any time. Please be considerate and don't
+        abuse this feature, as it requires a fair amount of work on the server.
+    </p>
 
-<p>
-    You may export all of your data as a compressed ZIP file consisting of several
-    comma-separated values files (CSV) at any time. Please be considerate and don't
-    abuse this feature, as it requires a fair amount of work on the server.
-</p>
+    <form method="GET" action="/rest/takeout">
+        <input type="submit" value="Export my data">
+    </form>
 
-<form method="GET" action="/rest/takeout">
-    <input type="submit" value="Export my data">
-</form>
+    <h2>Delete account</h2>
 
-<h2>Delete account</h2>
+    <p>
+        After deleting your account, all of the retrieved data associated with it will be lost.
+        If you're certain this is what you want, type "confirm" without quotes in the text box
+        below and then click the button.
+    </p>
 
-<p>
-    After deleting your account, all of the retrieved data associated with it will be lost.
-    If you're certain this is what you want, type "confirm" without quotes in the text box
-    below and then click the button.
-</p>
-
-<form on:submit|preventDefault={delete_account}>
-    <div>
-        <label for="confirm">Confirmation: </label>
-        <input type="text" name="confirm" id="confirm" bind:value={delete_confirm} required>
-    </div>
-    <div>
-        <input type="submit" value="Delete account" disabled={delete_confirm != "confirm"}>
-    </div>
-</form>
+    <form on:submit|preventDefault={delete_account}>
+        <div>
+            <label for="confirm">Confirmation: </label>
+            <input type="text" name="confirm" id="confirm" bind:value={delete_confirm} required>
+        </div>
+        <div>
+            <input type="submit" value="Delete account" disabled={delete_confirm != "confirm"}>
+        </div>
+    </form>
+</div>
