@@ -45,6 +45,7 @@ def author_id_from_url(url):
     assert url.netloc == "ieeexplore.ieee.org", f"unexpected domain {url.netloc}"
     parts = url.path.split("/")
     assert parts[1] == "author", f"unexpected path {parts[1]}"
+    int(parts[2])  # author id must be integer else it will fail later
     return parts[2]
 
 
