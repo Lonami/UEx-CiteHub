@@ -7,6 +7,7 @@ from pathlib import Path
 import os
 import base64
 import re
+import hmac
 
 
 MIN_PASSWORD_LENGTH = 5
@@ -63,7 +64,7 @@ class Users:
         saved_password, salt = details
         password, _ = utils.hash_user_pass(password, salt)
 
-        if password != saved_password:
+        if not hmac.compare_digest(password, saved_password):
             raise bad_info
 
         token = await self._gen_token()
@@ -83,7 +84,7 @@ class Users:
         saved_password, salt = await self._db.get_user_password(username=username)
 
         old_password, _ = utils.hash_user_pass(old_password, salt)
-        if old_password != saved_password:
+        if not hmac.compare_digest(old_password, saved_password):
             raise web.HTTPBadRequest(reason="old password did not match")
 
         _check_password(new_password)
