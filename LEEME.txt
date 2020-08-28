@@ -1,0 +1,23 @@
+Programas externos necesarios:
+
+* Node.js (https://nodejs.org/)
+* Python 3.7+ (https://www.python.org/)
+
+Instalando las dependencias de npm (dentro del directorio client/):
+
+    npm install
+
+Instalando las dependencias de Python (en el directorio raíz):
+
+    pip install -r requirements.txt
+
+Generando la interfaz de usuario (dentro del directorio client/):
+
+    npm run build
+
+Antes de ejecutar el servidor, el fichero server-config.ini debe existir
+(copia y renómbralo de example-server-config.ini) con la configuración deseada.
+
+Ejecutando el servidor (en el directorio raíz):
+
+    python -m server
