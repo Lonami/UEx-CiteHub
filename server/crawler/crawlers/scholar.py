@@ -78,17 +78,8 @@ if _PAGE_CACHE:
             with cache.open("w", encoding="utf-8") as fd:
                 fd.write(html)
 
-        if 'id="gs_captcha_f"' in html:
-            new_cookies = []
-
-            for c in session.cookie_jar:
-                c["max-age"] = -1
-                new_cookies.append((c.key, c))
-
-            session.cookie_jar.update_cookies(new_cookies)
-            _HEADERS["User-Agent"] = _get_user_agent()
-
-            raise RuntimeError("hit captcha while crawling google scholar")
+            if 'id="gs_captcha_f"' in html:
+                raise RuntimeError("hit captcha while crawling google scholar")
 
         return bs4.BeautifulSoup(html, "html.parser")
 
@@ -104,7 +95,17 @@ else:
         async with session.get(url, headers=_HEADERS) as resp:
             resp.raise_for_status()
             html = (await resp.text()).replace("\xa0", " ")
+
             if 'id="gs_captcha_f"' in html:
+                new_cookies = []
+
+                for c in session.cookie_jar:
+                    c["max-age"] = -1
+                    new_cookies.append((c.key, c))
+
+                session.cookie_jar.update_cookies(new_cookies)
+                _HEADERS["User-Agent"] = _get_user_agent()
+
                 raise RuntimeError("hit captcha while crawling google scholar")
 
             return bs4.BeautifulSoup(html, "html.parser")
