@@ -16,8 +16,6 @@ from ..step import Step
 
 _log = logging.getLogger(__name__)
 
-_PAGE_CACHE = True  # for debugging purposes
-
 
 def _get_user_agent():
     # Being random here is fine, it doesn't affect the returned data, only the retrieval process
@@ -52,63 +50,29 @@ _USER_RE = re.compile(r"user=([^&]+)")
 _CITATION_RE = re.compile(r"citation_for_view=([\w-]*:[\w-]*)")
 
 
-if _PAGE_CACHE:
-    # copy-paste of non-cache version
-    async def _get_page(
-        session: aiohttp.ClientSession, path: str = "", url: str = None
-    ) -> bs4.BeautifulSoup:
-        import hashlib
-        from pathlib import Path
+async def _get_page(
+    session: aiohttp.ClientSession, path: str = "", url: str = None
+) -> bs4.BeautifulSoup:
+    if not url:
+        url = _HOST + path
 
-        if not url:
-            url = _HOST + path
+    async with session.get(url, headers=_HEADERS) as resp:
+        resp.raise_for_status()
+        html = (await resp.text()).replace("\xa0", " ")
 
-        path = Path("cache/scholar")
-        path.mkdir(parents=True, exist_ok=True)
-        cache = path / hashlib.sha256(url.encode("utf-8")).hexdigest()
+        if 'id="gs_captcha_f"' in html:
+            new_cookies = []
 
-        if cache.is_file():
-            with cache.open(encoding="utf-8") as fd:
-                html = fd.read()
-        else:
-            async with session.get(url, headers=_HEADERS) as resp:
-                resp.raise_for_status()
-                html = (await resp.text()).replace("\xa0", " ")
+            for c in session.cookie_jar:
+                c["max-age"] = -1
+                new_cookies.append((c.key, c))
 
-            with cache.open("w", encoding="utf-8") as fd:
-                fd.write(html)
+            session.cookie_jar.update_cookies(new_cookies)
+            _HEADERS["User-Agent"] = _get_user_agent()
 
-            if 'id="gs_captcha_f"' in html:
-                raise RuntimeError("hit captcha while crawling google scholar")
+            raise RuntimeError("hit captcha while crawling google scholar")
 
         return bs4.BeautifulSoup(html, "html.parser")
-
-
-else:
-
-    async def _get_page(
-        session: aiohttp.ClientSession, path: str = "", url: str = None
-    ) -> bs4.BeautifulSoup:
-        if not url:
-            url = _HOST + path
-
-        async with session.get(url, headers=_HEADERS) as resp:
-            resp.raise_for_status()
-            html = (await resp.text()).replace("\xa0", " ")
-
-            if 'id="gs_captcha_f"' in html:
-                new_cookies = []
-
-                for c in session.cookie_jar:
-                    c["max-age"] = -1
-                    new_cookies.append((c.key, c))
-
-                session.cookie_jar.update_cookies(new_cookies)
-                _HEADERS["User-Agent"] = _get_user_agent()
-
-                raise RuntimeError("hit captcha while crawling google scholar")
-
-            return bs4.BeautifulSoup(html, "html.parser")
 
 
 def _analyze_basic_author_soup(soup) -> dict:
