@@ -8,7 +8,7 @@ from .step import Step
 
 _log = logging.getLogger(__name__)
 
-ERROR_DELAYS = [1, 10, 60, 10 * 60, 60 * 60, 24 * 60 * 60]
+ERROR_DELAYS = [30, 60, 10 * 60, 60 * 60, 12 * 60 * 60, 24 * 60 * 60, 7 * 24 * 60 * 60]
 
 
 class Crawler(abc.ABC):
