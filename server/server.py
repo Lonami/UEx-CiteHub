@@ -70,10 +70,12 @@ class Server:
         )
 
         await runner.setup()
-        sites = [
-            aiohttp.web_runner.TCPSite(runner),
-            aiohttp.web_runner.UnixSite(runner, cfg["www"]["unix_socket_path"]),
-        ]
+
+        sites = [aiohttp.web_runner.TCPSite(runner)]
+
+        unix_socket_path = cfg["www"].get("unix_socket_path") or None
+        if unix_socket_path:
+            sites.append(aiohttp.web_runner.UnixSite(runner, unix_socket_path))
 
         try:
             async with self._app["db"], self._app["scheduler"], self._app["merger"]:
@@ -82,9 +84,13 @@ class Server:
                     await site.start()
                     print("*", site.name)
 
-                user, group = cfg["www"]["chown_unix_socket"].split(":")
-                shutil.chown(cfg["www"]["unix_socket_path"], user, group)
-                os.chmod(cfg["www"]["unix_socket_path"], stat.S_IRGRP | stat.S_IWGRP)
+                if unix_socket_path:
+                    chown_unix_socket = cfg["www"].get("chown_unix_socket") or None
+                    if chown_unix_socket:
+                        user, group = chown_unix_socket.split(":")
+                        shutil.chown(unix_socket_path, user, group)
+
+                    os.chmod(unix_socket_path, stat.S_IRGRP | stat.S_IWGRP)
 
                 while True:
                     await asyncio.sleep(60 * 60)
