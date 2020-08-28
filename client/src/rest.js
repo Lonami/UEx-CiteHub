@@ -1,3 +1,5 @@
+import { logged_in } from './stores.js';
+
 function NetworkError(message, status) {
     var instance = new Error(message);
     instance.name = 'NetworkError';
@@ -24,6 +26,13 @@ async function fetch_json(resource, init) {
     if (res.ok) {
         return await res.json();
     } else {
+        if (res.status === 403) {
+            // Not the best place to do this, but it's the most convenient.
+            // Avoids having to check for status 403 everywhere a network call is made.
+            logged_in.set(false);
+            window.location.replace('/login');
+        }
+
         throw new NetworkError(await res.text(), res.status);
     }
 }
