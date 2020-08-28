@@ -8,6 +8,7 @@ let source_form;
 let submit_source;
 
 let password_form;
+let confirm_password;
 let submit_password;
 
 let last_error = null;
@@ -50,6 +51,11 @@ async function save_details() {
 async function save_password() {
     // TODO reusable Form component that does this? (and disables all other fields)
     // TODO maybe move reusable components to components/ and pages to pages/
+    if (event.target.new_password.value !== confirm_password.value) {
+        last_error = {message: "new passwords don't match"};
+        return;
+    }
+
     submit_password.disabled = true;
     let old_submit = submit_source.value;
     submit_password.value = 'Updating…';
@@ -164,6 +170,10 @@ function clear_notify() {
         <div>
             <label for="new_password">New password: </label>
             <input type="password" name="new_password" id="new_password" required>
+        </div>
+        <div>
+            <label for="confirm_new_password">Confirm new password: </label>
+            <input bind:this={confirm_password} type="password" id="confirm_new_password" required>
         </div>
         <div>
             <input bind:this={submit_password} type="submit" value="Update password">

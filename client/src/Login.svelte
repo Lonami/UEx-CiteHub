@@ -10,6 +10,7 @@
     });
 
     let form;
+    let confirm_password = null;
     let error = null;
 
     function set_form_enabled(enabled) {
@@ -19,6 +20,11 @@
     }
 
     async function handle_submit(event) {
+        if (confirm_password !== null && event.target.password.value !== confirm_password.value) {
+            error = {message: "passwords don't match"};
+            return;
+        }
+
         set_form_enabled(false);
 
         let logged = false;
@@ -87,6 +93,10 @@
                 <input type="text" name="username" id="username" required>
                 <label for="password">Password: </label>
                 <input type="password" name="password" id="password" required>
+                {#if register}
+                    <label for="confirm_password">Confirm password: </label>
+                    <input bind:this={confirm_password} type="password" id="confirm_password" required>
+                {/if}
             </div>
             <input type="submit" value={register ? "Register" : "Login"}>
         </form>
