@@ -18,15 +18,28 @@ _log = logging.getLogger(__name__)
 
 _PAGE_CACHE = True  # for debugging purposes
 
+
+def _get_user_agent():
+    # Being random here is fine, it doesn't affect the returned data, only the retrieval process
+    return random.choice(
+        (
+            "Mozilla/5.0 (X11; Linux x86_64; rv:80.0) Gecko/20100101 Firefox/80.0",
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:80.0) Gecko/20100101 Firefox/80.0",
+            "Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36",
+        )
+    )
+
+
 _HOST = "https://scholar.google.com"
 _HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;*/*",
     "Accept-Encoding": "gzip, deflate, br",
     "Accept-Language": "en-US",
-    "Cookie": "NID=203=vlT7m1DDdoWUifNI20xIboEeWZhbdMDcJbPP52iWy2-DPUww4USzNMKUqZCHn4HJCjBmACqej7LzqA1mkpVx4rtVCvAl1JZrw9rbMHOarMA_oyxzhC_zBEcs-Yr_YFQjjP-mM9doFIUKgb0HXjJB4eiSF6FGY7dxKME-VAi27f2DuOpBSuO4yKsYYTVT9Ek9oBscWCwdgCLxwwwAOdAPbz0F; GSP=A=bl17_A:CPTS=1588243844:LM=1588243844:S=ENX3yc3St4asJnMT; 1P_JAR=2020-04-30-09; SID=wQdzQm6xVVbBRFM6p2wvHyg94TF1IKRqi_HswbQpwHSm7CSfwLY0jBLU8iybA0M3lshdew.; __Secure-3PSID=wQdzQm6xVVbBRFM6p2wvHyg94TF1IKRqi_HswbQpwHSm7CSfQeP6FtOiPTlz9FP9_-4B0Q.; HSID=AglcJQqcUSuMMXjvJ; SSID=AlQxjS1laOR7CJFWO; APISID=bStucEx6CbBCatNj/AoFMuVqLoVzwmbvcu; SAPISID=Md2nISlNjMpqb6C-/Avf8qIllpoKlHDv4i; __Secure-HSID=AglcJQqcUSuMMXjvJ; __Secure-SSID=AlQxjS1laOR7CJFWO; __Secure-APISID=bStucEx6CbBCatNj/AoFMuVqLoVzwmbvcu; __Secure-3PAPISID=Md2nISlNjMpqb6C-/Avf8qIllpoKlHDv4i; SIDCC=AJi4QfEwefW2gbjEmtXdANO43xvGO5y-gZc1mHtETsqIERUvQ7ThoSe0icypAZtMYXpiWufMWE4",
     "Host": "scholar.google.com",
     "Upgrade-Insecure-Requests": "1",
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.75.14 (KHTML, like Gecko) Version/7.0.3 Safari/7046A194A",
+    "User-Agent": _get_user_agent(),
 }
 
 _PAGE_SIZE = 100
@@ -66,6 +79,15 @@ if _PAGE_CACHE:
                 fd.write(html)
 
         if 'id="gs_captcha_f"' in html:
+            new_cookies = []
+
+            for c in session.cookie_jar:
+                c["max-age"] = -1
+                new_cookies.append((c.key, c))
+
+            session.cookie_jar.update_cookies(new_cookies)
+            _HEADERS["User-Agent"] = _get_user_agent()
+
             raise RuntimeError("hit captcha while crawling google scholar")
 
         return bs4.BeautifulSoup(html, "html.parser")
@@ -328,9 +350,9 @@ def author_id_from_url(url):
     return query["user"][0]
 
 
-PROFILE_DELAY = 5 * 60
-PUBLICATION_DELAY = 60 * 60
-CITATION_DELAY = 5 * 60
+PROFILE_DELAY = 60 * 60
+PUBLICATION_DELAY = 4 * 60 * 60
+CITATION_DELAY = 10 * 60
 
 
 class Stage:
