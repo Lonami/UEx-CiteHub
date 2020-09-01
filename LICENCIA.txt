@@ -1,0 +1,4 @@
+Todos los derechos sobre el código y otros recursos presentes en este
+repositorio están reservados en exclusiva al autor y la universidad a la que
+pertenece el autor, y no se podrán utilizar en ningún otro lugar hasta futuro
+aviso.
